@@ -77,7 +77,6 @@ const fallbackState: ControlCenterState = {
     app('markrush', 'MarkRush', 'MarkRush', 'Markdown-focused writing and publishing tools.', '#e05d7b', 'MR', 'Work Stuff'),
     app('opensplit', 'OpenSplit', 'OpenSplit', 'Split-screen and window workflow utility.', '#4fb6d8', 'OS', 'Work Stuff'),
     app('venice-media-local', 'Venice Media', 'VeniceMediaLocal', 'Local Venice media generator.', '#34c6a3', 'VM', 'Work Stuff'),
-    app('walletwitness', 'WalletWitness', 'WalletWitness', 'Wallet and transaction inspection utility.', '#e3b342', 'WW', 'Work Stuff'),
     app('purpleplanet', 'PurplePlanet', 'PurplePlanet', 'Creative app from the ForPublic collection.', '#8c65df', 'PP', 'Fun Stuff'),
     app('stargaze', 'StarGaze', 'StarGaze', 'Astronomy and sky-oriented utility.', '#6b7cff', 'SG', 'Fun Stuff'),
   ],
