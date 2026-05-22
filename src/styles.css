@@ -518,8 +518,10 @@ button {
 .app-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(clamp(150px, 18vw, 238px), 1fr));
-  grid-auto-rows: minmax(58px, 1fr);
-  gap: 10px;
+  grid-auto-rows: auto;
+  align-content: start;
+  column-gap: 10px;
+  row-gap: 7px;
   height: 100%;
   min-width: 0;
   min-height: 0;
@@ -531,8 +533,8 @@ button {
   gap: 6px;
   grid-column: 1 / -1;
   min-width: 0;
-  min-height: 28px;
-  max-height: 30px;
+  min-height: 24px;
+  max-height: 26px;
   padding: 0 8px;
   border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
   border-radius: 8px;
