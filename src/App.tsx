@@ -15,7 +15,7 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 type ThemeId = 'neko-tron' | 'pearl-white' | 'abyss-teal' | 'ember' | 'mosswood' | 'rose-noir'
 
@@ -227,6 +227,16 @@ type DragItem =
   | { kind: 'app'; id: string }
   | { kind: 'category'; label: string }
 
+type PointerDrag = {
+  item: DragItem
+  pointerId: number
+  startX: number
+  startY: number
+  active: boolean
+}
+
+const dragDataType = 'application/x-neko-layout-item'
+
 export default function App() {
   const [state, setState] = useState<ControlCenterState>(fallbackState)
   const [busy, setBusy] = useState(false)
@@ -234,6 +244,10 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string>('venice-media-local')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [draggedItem, setDraggedItem] = useState<DragItem | null>(null)
+  const draggedItemRef = useRef<DragItem | null>(null)
+  const pointerDragRef = useRef<PointerDrag | null>(null)
+  const suppressClickRef = useRef(false)
+  const gridRef = useRef<HTMLElement | null>(null)
 
   const visibleApps = useMemo(() => state.apps.filter((candidate) => candidate.visible), [state.apps])
   const selectedApp = useMemo(
@@ -371,40 +385,148 @@ export default function App() {
     }
   }
 
-  function handleDropOnApp(target: LauncherApp) {
-    if (!draggedItem) return
-    const nextCategories = orderedCategories(state.apps, state.settings.categories)
+  function getDragItem(event: React.DragEvent): DragItem | null {
+    if (draggedItemRef.current) return draggedItemRef.current
+    const rawItem = event.dataTransfer.getData(dragDataType)
+    if (!rawItem) return null
+    try {
+      const item = JSON.parse(rawItem) as DragItem
+      if (item.kind === 'app' || item.kind === 'category') {
+        return item
+      }
+    } catch {
+      return null
+    }
+    return null
+  }
+
+  function clearDrag() {
+    pointerDragRef.current = null
+    draggedItemRef.current = null
     setDraggedItem(null)
-    if (draggedItem.kind === 'category') {
-      const categories = moveCategory(nextCategories, draggedItem.label, categoryLabel(target.category))
+  }
+
+  function categoryFromY(clientY: number): string {
+    const rows = Array.from(gridRef.current?.querySelectorAll<HTMLElement>('.category-row[data-category]') ?? [])
+    let selectedCategory = rows[0]?.dataset.category ?? layoutCategories[0] ?? defaultCategories[0]
+    for (const row of rows) {
+      if (clientY >= row.getBoundingClientRect().top) {
+        selectedCategory = row.dataset.category ?? selectedCategory
+      }
+    }
+    return categoryLabel(selectedCategory)
+  }
+
+  function categoryFromDropPosition(event: React.DragEvent<HTMLElement>): string {
+    return categoryFromY(event.clientY)
+  }
+
+  function applyDropItemToApp(item: DragItem, target: LauncherApp) {
+    const nextCategories = orderedCategories(state.apps, state.settings.categories)
+    if (item.kind === 'category') {
+      const categories = moveCategory(nextCategories, item.label, categoryLabel(target.category))
       if (categories !== nextCategories) {
         void persistLayout(state.apps, 'Category moved', categories)
       }
       return
     }
 
-    const apps = moveAppToApp(state.apps, draggedItem.id, target)
+    const apps = moveAppToApp(state.apps, item.id, target)
     if (apps !== state.apps) {
       void persistLayout(apps, 'Layout saved')
     }
   }
 
-  function handleDropOnCategory(category: string) {
-    if (!draggedItem) return
+  function applyDropItemToCategory(item: DragItem, category: string) {
     const nextCategories = orderedCategories(state.apps, state.settings.categories)
-    setDraggedItem(null)
-    if (draggedItem.kind === 'category') {
-      const categories = moveCategory(nextCategories, draggedItem.label, category)
+    if (item.kind === 'category') {
+      const categories = moveCategory(nextCategories, item.label, category)
       if (categories !== nextCategories) {
         void persistLayout(state.apps, 'Category moved', categories)
       }
       return
     }
 
-    const apps = moveAppToCategory(state.apps, draggedItem.id, category)
+    const apps = moveAppToCategory(state.apps, item.id, category)
     if (apps !== state.apps) {
       void persistLayout(apps, 'App moved')
     }
+  }
+
+  function handleDropOnApp(event: React.DragEvent, target: LauncherApp) {
+    const item = getDragItem(event)
+    if (!item) return
+    clearDrag()
+    applyDropItemToApp(item, target)
+  }
+
+  function handleDropOnCategory(event: React.DragEvent, category: string) {
+    const item = getDragItem(event)
+    if (!item) return
+    clearDrag()
+    applyDropItemToCategory(item, category)
+  }
+
+  function handleDropOnGrid(event: React.DragEvent<HTMLElement>) {
+    event.preventDefault()
+    const item = getDragItem(event)
+    if (!item) return
+    handleDropOnCategory(event, categoryFromDropPosition(event))
+  }
+
+  function startPointerDrag(event: React.PointerEvent<HTMLElement>, item: DragItem) {
+    if (event.button !== 0) return
+    pointerDragRef.current = {
+      item,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      active: false,
+    }
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+  }
+
+  function movePointerDrag(event: React.PointerEvent<HTMLElement>) {
+    const pointerDrag = pointerDragRef.current
+    if (!pointerDrag || pointerDrag.pointerId !== event.pointerId) return
+    const distance = Math.hypot(event.clientX - pointerDrag.startX, event.clientY - pointerDrag.startY)
+    if (!pointerDrag.active && distance > 6) {
+      pointerDrag.active = true
+      draggedItemRef.current = pointerDrag.item
+      setDraggedItem(pointerDrag.item)
+    }
+    if (pointerDrag.active) {
+      event.preventDefault()
+    }
+  }
+
+  function endPointerDrag(event: React.PointerEvent<HTMLElement>) {
+    const pointerDrag = pointerDragRef.current
+    if (!pointerDrag || pointerDrag.pointerId !== event.pointerId) return
+    pointerDragRef.current = null
+    event.currentTarget.releasePointerCapture?.(event.pointerId)
+
+    if (!pointerDrag.active) return
+
+    event.preventDefault()
+    event.stopPropagation()
+    suppressClickRef.current = true
+    window.setTimeout(() => {
+      suppressClickRef.current = false
+    }, 0)
+
+    const dropTarget = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null
+    const appTarget = dropTarget?.closest<HTMLElement>('.app-tile[data-app-id]')
+    const categoryTarget = dropTarget?.closest<HTMLElement>('[data-category]')
+    const targetApp = appTarget?.dataset.appId ? state.apps.find((candidate) => candidate.id === appTarget.dataset.appId) : null
+    const targetCategory = categoryTarget?.dataset.category ?? categoryFromY(event.clientY)
+
+    clearDrag()
+    if (targetApp && !(pointerDrag.item.kind === 'app' && pointerDrag.item.id === targetApp.id)) {
+      applyDropItemToApp(pointerDrag.item, targetApp)
+      return
+    }
+    applyDropItemToCategory(pointerDrag.item, targetCategory)
   }
 
   function addCategory() {
@@ -477,7 +599,7 @@ export default function App() {
   }
 
   return (
-    <div className={classNames('app-shell', `theme-${state.settings.theme}`, state.settings.compactLabels && 'compact-labels')}>
+    <div className={classNames('app-shell', `theme-${state.settings.theme}`, state.settings.compactLabels && 'compact-labels', draggedItem && 'dragging-layout')}>
       <header className="topbar">
         <div className="brand-lockup">
           <div className="brand-mark">
@@ -535,28 +657,27 @@ export default function App() {
                 <span
                   className="category-chip"
                   key={category}
-                  draggable
-                  onDragStart={(event) => {
-                    setDraggedItem({ kind: 'category', label: category })
-                    event.dataTransfer.effectAllowed = 'move'
-                    event.dataTransfer.setData('text/plain', category)
-                  }}
+                  onPointerDown={(event) => startPointerDrag(event, { kind: 'category', label: category })}
+                  onPointerMove={movePointerDrag}
+                  onPointerUp={endPointerDrag}
+                  onPointerCancel={clearDrag}
                   onDragOver={(event) => {
                     event.preventDefault()
                     event.dataTransfer.dropEffect = 'move'
                   }}
-                  onDragEnd={() => setDraggedItem(null)}
+                  onDragEnd={clearDrag}
                   onDrop={(event) => {
                     event.preventDefault()
-                    handleDropOnCategory(category)
+                    event.stopPropagation()
+                    handleDropOnCategory(event, category)
                   }}
                 >
                   <GripVertical size={12} />
                   <span>{category}</span>
-                  <button type="button" onClick={() => renameCategory(category)} title={`Rename ${category}`}>
+                  <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => renameCategory(category)} title={`Rename ${category}`}>
                     <Pencil size={12} />
                   </button>
-                  <button type="button" onClick={() => deleteCategory(category)} disabled={layoutCategories.length <= 1} title={`Delete ${category}`}>
+                  <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => deleteCategory(category)} disabled={layoutCategories.length <= 1} title={`Delete ${category}`}>
                     <Trash2 size={12} />
                   </button>
                 </span>
@@ -587,7 +708,15 @@ export default function App() {
         <section
           className="app-grid"
           aria-label="App launcher"
+          ref={gridRef}
           style={{ '--visible-count': visibleApps.length } as React.CSSProperties}
+          onDragOver={(event) => {
+            if (draggedItemRef.current) {
+              event.preventDefault()
+              event.dataTransfer.dropEffect = 'move'
+            }
+          }}
+          onDrop={handleDropOnGrid}
         >
           {visibleGridItems.map((item) => {
             if (item.kind === 'category') {
@@ -595,20 +724,20 @@ export default function App() {
                 <div
                   className="category-row"
                   key={item.id}
-                  draggable
-                  onDragStart={(event) => {
-                    setDraggedItem({ kind: 'category', label: item.label })
-                    event.dataTransfer.effectAllowed = 'move'
-                    event.dataTransfer.setData('text/plain', item.label)
-                  }}
+                  data-category={item.label}
+                  onPointerDown={(event) => startPointerDrag(event, { kind: 'category', label: item.label })}
+                  onPointerMove={movePointerDrag}
+                  onPointerUp={endPointerDrag}
+                  onPointerCancel={clearDrag}
                   onDragOver={(event) => {
                     event.preventDefault()
                     event.dataTransfer.dropEffect = 'move'
                   }}
-                  onDragEnd={() => setDraggedItem(null)}
+                  onDragEnd={clearDrag}
                   onDrop={(event) => {
                     event.preventDefault()
-                    handleDropOnCategory(item.label)
+                    event.stopPropagation()
+                    handleDropOnCategory(event, item.label)
                   }}
                 >
                   <GripVertical size={13} />
@@ -626,23 +755,36 @@ export default function App() {
                 type="button"
                 className={classNames('app-tile', selected && 'selected')}
                 style={{ '--app-accent': appInfo.accent } as React.CSSProperties}
-                draggable
-                onDragStart={(event) => {
-                  setDraggedItem({ kind: 'app', id: appInfo.id })
-                  event.dataTransfer.effectAllowed = 'move'
-                  event.dataTransfer.setData('text/plain', appInfo.id)
-                }}
+                data-category={categoryLabel(appInfo.category)}
+                data-app-id={appInfo.id}
+                onPointerDown={(event) => startPointerDrag(event, { kind: 'app', id: appInfo.id })}
+                onPointerMove={movePointerDrag}
+                onPointerUp={endPointerDrag}
+                onPointerCancel={clearDrag}
                 onDragOver={(event) => {
                   event.preventDefault()
                   event.dataTransfer.dropEffect = 'move'
                 }}
-                onDragEnd={() => setDraggedItem(null)}
+                onDragEnd={clearDrag}
                 onDrop={(event) => {
                   event.preventDefault()
-                  handleDropOnApp(appInfo)
+                  event.stopPropagation()
+                  handleDropOnApp(event, appInfo)
                 }}
-                onClick={() => setSelectedId(appInfo.id)}
-                onDoubleClick={() => appInfo.executablePath ? void launchSelected() : void chooseExecutable(appInfo)}
+                onClick={(event) => {
+                  if (suppressClickRef.current) {
+                    event.preventDefault()
+                    return
+                  }
+                  setSelectedId(appInfo.id)
+                }}
+                onDoubleClick={(event) => {
+                  if (suppressClickRef.current) {
+                    event.preventDefault()
+                    return
+                  }
+                  appInfo.executablePath ? void launchSelected() : void chooseExecutable(appInfo)
+                }}
               >
                 <span className="app-icon">{appInfo.icon}</span>
                 <span className="app-copy">
