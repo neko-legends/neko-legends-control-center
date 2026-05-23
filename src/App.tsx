@@ -12,7 +12,6 @@ import {
   Plus,
   RefreshCw,
   Settings2,
-  Sparkles,
   Trash2,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -33,7 +32,13 @@ type LauncherApp = {
   releaseUrl: string | null
   releaseCheckedAt: string | null
   releaseNotes: string | null
+  releaseOptions: ReleaseOption[]
   visible: boolean
+}
+
+type ReleaseOption = {
+  tagName: string
+  htmlUrl: string
 }
 
 type AppSettings = {
@@ -47,6 +52,12 @@ type ControlCenterState = {
   apps: LauncherApp[]
   buildVersion: string
   dataDir: string
+}
+
+type DownloadResult = {
+  apps: LauncherApp[]
+  filePath: string
+  installFolder: string
 }
 
 type Theme = {
@@ -98,6 +109,7 @@ function app(id: string, name: string, repo: string, description: string, accent
     releaseUrl: null,
     releaseCheckedAt: null,
     releaseNotes: null,
+    releaseOptions: [],
     visible: true,
   }
 }
@@ -129,6 +141,12 @@ function versionStatus(appInfo: LauncherApp): 'ready' | 'update' | 'unknown' {
   if (!appInfo.installedVersion) return 'ready'
   return appInfo.installedVersion === appInfo.latestVersion ? 'ready' : 'update'
 }
+
+function installStatus(appInfo: LauncherApp): 'installed' | 'missing' {
+  return appInfo.executablePath ? 'installed' : 'missing'
+}
+
+type AppDisplayStatus = 'missing' | 'installed' | 'update' | 'downloading' | 'failed'
 
 function fileName(path: string | null): string {
   if (!path) return ''
@@ -244,6 +262,9 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string>('venice-media-local')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [draggedItem, setDraggedItem] = useState<DragItem | null>(null)
+  const [selectedReleaseTags, setSelectedReleaseTags] = useState<Record<string, string>>({})
+  const [activeDownloads, setActiveDownloads] = useState<string[]>([])
+  const [failedDownloads, setFailedDownloads] = useState<Record<string, boolean>>({})
   const draggedItemRef = useRef<DragItem | null>(null)
   const pointerDragRef = useRef<PointerDrag | null>(null)
   const suppressClickRef = useRef(false)
@@ -257,9 +278,30 @@ export default function App() {
 
   const configuredCount = visibleApps.filter((candidate) => candidate.executablePath).length
   const updateCount = visibleApps.filter((candidate) => versionStatus(candidate) === 'update').length
+  const missingCount = visibleApps.filter((candidate) => !candidate.executablePath).length
   const hiddenCount = state.apps.length - visibleApps.length
   const layoutCategories = useMemo(() => orderedCategories(state.apps, state.settings.categories), [state.apps, state.settings.categories])
   const visibleGridItems = useMemo(() => gridItems(visibleApps, layoutCategories), [layoutCategories, visibleApps])
+
+  function selectedVersionFor(appInfo: LauncherApp): string | null {
+    return selectedReleaseTags[appInfo.id] ?? appInfo.latestVersion ?? appInfo.releaseOptions[0]?.tagName ?? null
+  }
+
+  function displayStatus(appInfo: LauncherApp): AppDisplayStatus {
+    if (activeDownloads.includes(appInfo.id)) return 'downloading'
+    if (failedDownloads[appInfo.id]) return 'failed'
+    if (!appInfo.executablePath) return 'missing'
+    if (versionStatus(appInfo) === 'update') return 'update'
+    return 'installed'
+  }
+
+  function displayStatusLabel(status: AppDisplayStatus): string {
+    if (status === 'downloading') return 'Downloading'
+    if (status === 'failed') return 'Failed'
+    if (status === 'update') return 'Update Ready'
+    if (status === 'installed') return 'Installed'
+    return 'Missing'
+  }
 
   useEffect(() => {
     void loadState()
@@ -316,9 +358,19 @@ export default function App() {
       return
     }
 
+    let defaultPath = appInfo.executablePath ?? undefined
+    if (!defaultPath) {
+      try {
+        defaultPath = await call<string>('get_default_install_dir')
+      } catch {
+        defaultPath = undefined
+      }
+    }
+
     const selected = await open({
       multiple: false,
       directory: false,
+      defaultPath,
       filters: [{ name: 'Windows executable', extensions: ['exe'] }],
     })
     if (typeof selected !== 'string') return
@@ -339,6 +391,71 @@ export default function App() {
       await call<void>('open_release_url', { request: { appId: appInfo.id } })
     } catch (error) {
       window.open(appInfo.releaseUrl ?? `https://github.com/${githubOwner}/${appInfo.repo}/releases`, '_blank', 'noopener')
+      setNotice(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  async function downloadLatest(appInfo: LauncherApp) {
+    await downloadRelease(appInfo, selectedVersionFor(appInfo), true)
+  }
+
+  async function downloadRelease(appInfo: LauncherApp, version: string | null, manageBusy: boolean): Promise<boolean> {
+    if (manageBusy) setBusy(true)
+    setActiveDownloads((current) => current.includes(appInfo.id) ? current : [...current, appInfo.id])
+    setFailedDownloads((current) => {
+      const next = { ...current }
+      delete next[appInfo.id]
+      return next
+    })
+    setNotice(`Downloading ${appInfo.name}...`)
+    try {
+      const result = await call<DownloadResult>('download_release', { request: { appId: appInfo.id, version } })
+      setState((current) => ({ ...current, apps: result.apps }))
+      setNotice(`${appInfo.name} downloaded to ${fileName(result.installFolder) || fileName(result.filePath)}`)
+      return true
+    } catch (error) {
+      setFailedDownloads((current) => ({ ...current, [appInfo.id]: true }))
+      setNotice(error instanceof Error ? error.message : String(error))
+      return false
+    } finally {
+      setActiveDownloads((current) => current.filter((id) => id !== appInfo.id))
+      if (manageBusy) setBusy(false)
+    }
+  }
+
+  async function downloadAllMissing() {
+    const targets = visibleApps.filter((appInfo) => !appInfo.executablePath)
+    if (targets.length === 0) return
+    setBusy(true)
+    let successCount = 0
+    for (const appInfo of targets) {
+      if (await downloadRelease(appInfo, appInfo.latestVersion ?? appInfo.releaseOptions[0]?.tagName ?? null, false)) {
+        successCount += 1
+      }
+    }
+    setBusy(false)
+    setNotice(`Downloaded ${successCount}/${targets.length} missing apps`)
+  }
+
+  async function updateAll() {
+    const targets = visibleApps.filter((appInfo) => versionStatus(appInfo) === 'update')
+    if (targets.length === 0) return
+    setBusy(true)
+    let successCount = 0
+    for (const appInfo of targets) {
+      if (await downloadRelease(appInfo, appInfo.latestVersion ?? null, false)) {
+        successCount += 1
+      }
+    }
+    setBusy(false)
+    setNotice(`Updated ${successCount}/${targets.length} apps`)
+  }
+
+  async function openInstallFolder(appInfo: LauncherApp) {
+    try {
+      await call<void>('open_install_folder', { request: { appId: appInfo.id } })
+      setNotice(`${appInfo.name} folder opened`)
+    } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error))
     }
   }
@@ -602,9 +719,6 @@ export default function App() {
     <div className={classNames('app-shell', `theme-${state.settings.theme}`, state.settings.compactLabels && 'compact-labels', draggedItem && 'dragging-layout')}>
       <header className="topbar">
         <div className="brand-lockup">
-          <div className="brand-mark">
-            <Sparkles size={18} />
-          </div>
           <div>
             <h1>Neko Legends Control Center</h1>
             <p>{configuredCount}/{visibleApps.length} apps wired · {updateCount} updates{hiddenCount > 0 ? ` · ${hiddenCount} hidden` : ''}</p>
@@ -617,6 +731,14 @@ export default function App() {
           <button className="scan-button" type="button" onClick={scanForUpdates} disabled={busy} title="Scan GitHub releases">
             {busy ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
             Scan
+          </button>
+          <button className="scan-button" type="button" onClick={() => void downloadAllMissing()} disabled={busy || missingCount === 0} title="Download missing apps">
+            <Download size={17} />
+            Get Missing
+          </button>
+          <button className="scan-button" type="button" onClick={() => void updateAll()} disabled={busy || updateCount === 0} title="Download available updates">
+            <RefreshCw size={17} />
+            Update All
           </button>
         </div>
       </header>
@@ -749,6 +871,7 @@ export default function App() {
             const appInfo = item.app
             const selected = appInfo.id === selectedApp?.id
             const status = versionStatus(appInfo)
+            const tileStatus = displayStatus(appInfo)
             return (
               <button
                 key={appInfo.id}
@@ -789,7 +912,9 @@ export default function App() {
                 <span className="app-icon">{appInfo.icon}</span>
                 <span className="app-copy">
                   <strong>{appInfo.name}</strong>
-                  <small>{status === 'update' ? 'Update ready' : appInfo.executablePath ? 'Ready' : 'Set path'}</small>
+                  <small className={classNames('app-status', tileStatus)}>
+                    {displayStatusLabel(tileStatus)}
+                  </small>
                 </span>
                 {status === 'update' && <span className="update-dot" />}
               </button>
@@ -815,8 +940,12 @@ export default function App() {
                 <strong>{githubOwner}/{selectedApp.repo}</strong>
               </div>
               <div>
-                <span>Release</span>
+                <span>Latest</span>
                 <strong>{selectedApp.latestVersion ?? 'Unknown'}</strong>
+              </div>
+              <div>
+                <span>Installed</span>
+                <strong>{selectedApp.installedVersion ?? 'None'}</strong>
               </div>
               <div>
                 <span>Checked</span>
@@ -828,6 +957,22 @@ export default function App() {
               </div>
             </div>
 
+            <label className="version-picker">
+              <span>Version</span>
+              <select
+                value={selectedVersionFor(selectedApp) ?? ''}
+                disabled={busy || selectedApp.releaseOptions.length === 0}
+                onChange={(event) => setSelectedReleaseTags((current) => ({ ...current, [selectedApp.id]: event.currentTarget.value }))}
+              >
+                {selectedApp.releaseOptions.length === 0 && <option value="">Scan releases</option>}
+                {selectedApp.releaseOptions.map((release) => (
+                  <option value={release.tagName} key={release.tagName}>
+                    {release.tagName}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <div className="detail-actions">
               <button className="primary-action" type="button" onClick={launchSelected} disabled={busy || !selectedApp.executablePath}>
                 <Play size={17} />
@@ -837,8 +982,16 @@ export default function App() {
                 <FolderOpen size={17} />
                 Path
               </button>
+              <button className="secondary-action" type="button" onClick={() => void openInstallFolder(selectedApp)}>
+                <FolderOpen size={17} />
+                Folder
+              </button>
+              <button className="secondary-action" type="button" onClick={() => void downloadLatest(selectedApp)} disabled={busy}>
+                <Download size={17} />
+                Download
+              </button>
               <button className="secondary-action" type="button" onClick={() => void openRelease(selectedApp)}>
-                {versionStatus(selectedApp) === 'update' ? <Download size={17} /> : <ExternalLink size={17} />}
+                <ExternalLink size={17} />
                 Release
               </button>
             </div>

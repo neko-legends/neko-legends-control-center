@@ -21,7 +21,10 @@ npm run dev
 ## Desktop Build
 
 ```powershell
-npm run tauri build
+npm run build:portable
 ```
+
+The portable executable is written to `src-tauri\target-portable\release\neko-legends-control-center-portable.exe`.
+A distribution-ready folder is also written to `release\NekoLegendsControlCenter` with an `apps` folder beside the launcher.
 
 The app is built with React, Vite, and Tauri.
