@@ -6,6 +6,7 @@ import {
   ExternalLink,
   FolderOpen,
   GripVertical,
+  Info,
   Loader2,
   Pencil,
   Play,
@@ -614,6 +615,16 @@ export default function App() {
       await call<void>('open_release_url', { request: { appId: appInfo.id } })
     } catch (error) {
       window.open(appInfo.releaseUrl ?? `https://github.com/${githubOwner}/${appInfo.repo}/releases`, '_blank', 'noopener')
+      setNotice(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  async function openRepository(appInfo: LauncherApp) {
+    try {
+      await call<void>('open_repository_url', { request: { appId: appInfo.id } })
+      setNotice(`${appInfo.name} info opened`)
+    } catch (error) {
+      window.open(`https://github.com/${githubOwner}/${appInfo.repo}`, '_blank', 'noopener')
       setNotice(error instanceof Error ? error.message : String(error))
     }
   }
@@ -1585,6 +1596,10 @@ export default function App() {
                   Launch
                 </button>
               )}
+              <button className="secondary-action" type="button" onClick={() => void openRepository(selectedApp)} title="Open GitHub README">
+                <Info size={17} />
+                Info
+              </button>
               {!selectedApp.demoUrl && (
                 <button className="secondary-action" type="button" onClick={() => void chooseExecutable(selectedApp)}>
                   <FolderOpen size={17} />
@@ -1652,6 +1667,17 @@ export default function App() {
               Launch
             </button>
           )}
+          <button
+            type="button"
+            title="Open GitHub README"
+            onClick={() => {
+              closeContextMenu()
+              void openRepository(contextMenuApp)
+            }}
+          >
+            <Info size={15} />
+            Info
+          </button>
           {!isAppDownloaded(contextMenuApp) && (
             <button
               type="button"

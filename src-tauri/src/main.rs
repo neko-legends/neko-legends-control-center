@@ -737,7 +737,7 @@ fn best_control_center_asset(release: &GitHubRelease) -> Option<&GitHubReleaseAs
 
 fn github_client() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
-        .user_agent("NekoLegendsControlCenter/26.6.5")
+        .user_agent("NekoLegendsControlCenter/26.6.8")
         .build()
         .map_err(|err| err.to_string())
 }
@@ -1356,6 +1356,17 @@ fn open_release_url(app: AppHandle, request: LaunchRequest) -> Result<(), String
 }
 
 #[tauri::command]
+fn open_repository_url(app: AppHandle, request: LaunchRequest) -> Result<(), String> {
+    let apps = read_apps(&app);
+    let launcher_app = apps
+        .iter()
+        .find(|candidate| candidate.id == request.app_id)
+        .ok_or_else(|| "App was not found".to_string())?;
+    let url = format!("https://github.com/{}/{}", GITHUB_OWNER, launcher_app.repo);
+    open::that(url).map_err(|err| err.to_string())
+}
+
+#[tauri::command]
 fn open_demo_url(app: AppHandle, request: LaunchRequest) -> Result<(), String> {
     let apps = read_apps(&app);
     let launcher_app = apps
@@ -1801,6 +1812,7 @@ fn main() {
             reset_layout,
             launch_app,
             open_release_url,
+            open_repository_url,
             open_demo_url,
             check_control_center_update,
             open_control_center_release,
