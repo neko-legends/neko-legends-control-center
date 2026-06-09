@@ -19,6 +19,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 type ThemeId = 'neko-tron' | 'pearl-white' | 'abyss-teal' | 'ember' | 'mosswood' | 'rose-noir'
 type PackagePreference = 'portable' | 'installer'
+type ToolStatus = 'available' | 'comingSoon'
 
 type LauncherApp = {
   id: string
@@ -38,6 +39,7 @@ type LauncherApp = {
   packagePreference: PackagePreference
   packagePath: string | null
   demoUrl: string | null
+  status: ToolStatus
   visible: boolean
 }
 
@@ -89,7 +91,7 @@ const themes: Theme[] = [
   { id: 'rose-noir', name: 'Rose', colors: ['#100b12', '#241627', '#ff6f9e'] },
 ]
 
-const defaultCategories = ['Work Stuff', 'Fun Stuff']
+const defaultCategories = ['Work Stuff', 'Fun Stuff', 'Under Development']
 const githubOwner = 'neko-legends'
 
 const fallbackState: ControlCenterState = {
@@ -98,8 +100,8 @@ const fallbackState: ControlCenterState = {
   dataDir: '',
   apps: [
     app('batchlapse', 'BatchLapse', 'BatchLapse', 'Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs.', '#5b8def', 'BL', 'Work Stuff'),
-    app('depth-map-ai-generator', 'DepthMap AI', 'DepthMapAIGenerator', 'Batch depth-map and WebP generator for local AI image workflows.', '#43b883', 'DM', 'Work Stuff'),
-    app('image-to-ascii-3d', 'ASCII 3D', 'ImageToASCII3D', 'Image-to-ASCII converter with optional depth-map driven 3D parallax exports.', '#f0a848', 'A3', 'Work Stuff'),
+    app('depth-map-ai-generator', 'DepthMap AI', 'DepthMapAIGenerator', 'Batch depth-map and WebP generator for local AI image workflows.', '#43b883', 'DM', 'Under Development', null, 'comingSoon'),
+    app('image-to-ascii-3d', 'ASCII 3D', 'ImageToASCII3D', 'Image-to-ASCII converter with optional depth-map driven 3D parallax exports.', '#f0a848', 'A3', 'Under Development', null, 'comingSoon'),
     app('markrush', 'MarkRush', 'MarkRush', 'Fast local Markdown viewer/editor built for huge files and folders.', '#e05d7b', 'MR', 'Work Stuff'),
     app('opensplit', 'OpenSplit', 'OpenSplit', 'Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.', '#4fb6d8', 'OS', 'Work Stuff'),
     app('venice-media-local', 'Venice Media', 'VeniceMediaLocal', 'Local Venice API media workspace for images, video, music, voice, and cleanup.', '#34c6a3', 'VM', 'Work Stuff'),
@@ -108,7 +110,7 @@ const fallbackState: ControlCenterState = {
   ],
 }
 
-function app(id: string, name: string, repo: string, description: string, accent: string, icon: string, category: string, demoUrl: string | null = null): LauncherApp {
+function app(id: string, name: string, repo: string, description: string, accent: string, icon: string, category: string, demoUrl: string | null = null, status: ToolStatus = 'available'): LauncherApp {
   return {
     id,
     name,
@@ -127,6 +129,7 @@ function app(id: string, name: string, repo: string, description: string, accent
     packagePreference: 'portable',
     packagePath: null,
     demoUrl,
+    status,
     visible: true,
   }
 }
@@ -183,6 +186,10 @@ function isAppDownloaded(appInfo: LauncherApp): boolean {
 
 function hasKnownRelease(appInfo: LauncherApp): boolean {
   return Boolean(appInfo.latestVersion || appInfo.releaseOptions.length > 0)
+}
+
+function isComingSoon(appInfo: LauncherApp): boolean {
+  return appInfo.status === 'comingSoon'
 }
 
 function installStatus(appInfo: LauncherApp): 'installed' | 'missing' {
@@ -415,6 +422,7 @@ export default function App() {
   function displayStatus(appInfo: LauncherApp): AppDisplayStatus {
     if (activeDownloads.includes(appInfo.id)) return 'downloading'
     if (failedDownloads[appInfo.id]) return 'failed'
+    if (!isAppDownloaded(appInfo) && isComingSoon(appInfo)) return 'coming-soon'
     if (!isAppDownloaded(appInfo)) return hasKnownRelease(appInfo) ? 'missing' : 'coming-soon'
     if (versionStatus(appInfo) === 'update') return 'update'
     return 'installed'
@@ -462,6 +470,7 @@ export default function App() {
     }
 
     try {
+      await call<LauncherApp[]>('refresh_tools_catalog').catch(() => null)
       const nextState = await call<ControlCenterState>('get_state')
       setState(nextState)
       const nextVisibleApps = nextState.apps.filter((candidate) => candidate.visible)
@@ -476,6 +485,7 @@ export default function App() {
     setBusy(true)
     setNotice('Scanning GitHub releases and Control Center...')
     try {
+      await call<LauncherApp[]>('refresh_tools_catalog').catch(() => null)
       const apps = await call<LauncherApp[]>('scan_releases')
       const update = await checkControlCenterUpdate(false)
       setState((current) => ({ ...current, apps }))
@@ -630,10 +640,18 @@ export default function App() {
   }
 
   async function downloadLatest(appInfo: LauncherApp) {
+    if (isComingSoon(appInfo)) {
+      setNotice(`${appInfo.name} is coming soon`)
+      return
+    }
     await downloadRelease(appInfo, selectedVersionFor(appInfo), true)
   }
 
   async function downloadRelease(appInfo: LauncherApp, version: string | null, manageBusy: boolean): Promise<boolean> {
+    if (isComingSoon(appInfo)) {
+      setNotice(`${appInfo.name} is coming soon`)
+      return false
+    }
     if (manageBusy) setBusy(true)
     setActiveDownloads((current) => current.includes(appInfo.id) ? current : [...current, appInfo.id])
     setFailedDownloads((current) => {
@@ -1610,7 +1628,7 @@ export default function App() {
                 <FolderOpen size={17} />
                 Folder
               </button>
-              <button className="secondary-action" type="button" onClick={() => void downloadLatest(selectedApp)} disabled={busy}>
+              <button className="secondary-action" type="button" onClick={() => void downloadLatest(selectedApp)} disabled={busy || isComingSoon(selectedApp)}>
                 <Download size={17} />
                 Download
               </button>
@@ -1678,7 +1696,7 @@ export default function App() {
             <Info size={15} />
             Info
           </button>
-          {!isAppDownloaded(contextMenuApp) && (
+          {!isAppDownloaded(contextMenuApp) && !isComingSoon(contextMenuApp) && (
             <button
               type="button"
               onClick={() => {

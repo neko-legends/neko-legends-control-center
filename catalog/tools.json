@@ -1,0 +1,104 @@
+{
+  "catalogVersion": 2,
+  "updatedAt": "2026-06-08",
+  "tools": [
+    {
+      "id": "batchlapse",
+      "name": "BatchLapse",
+      "repo": "BatchLapse",
+      "description": "Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs.",
+      "accent": "#5b8def",
+      "icon": "BL",
+      "category": "Work Stuff",
+      "packagePreference": "portable",
+      "status": "available",
+      "visible": true
+    },
+    {
+      "id": "depth-map-ai-generator",
+      "name": "DepthMap AI",
+      "repo": "DepthMapAIGenerator",
+      "description": "Batch depth-map and WebP generator for local AI image workflows.",
+      "accent": "#43b883",
+      "icon": "DM",
+      "category": "Under Development",
+      "packagePreference": "portable",
+      "status": "comingSoon",
+      "visible": true
+    },
+    {
+      "id": "image-to-ascii-3d",
+      "name": "ASCII 3D",
+      "repo": "ImageToASCII3D",
+      "description": "Image-to-ASCII converter with optional depth-map driven 3D parallax exports.",
+      "accent": "#f0a848",
+      "icon": "A3",
+      "category": "Under Development",
+      "packagePreference": "portable",
+      "status": "comingSoon",
+      "visible": true
+    },
+    {
+      "id": "markrush",
+      "name": "MarkRush",
+      "repo": "MarkRush",
+      "description": "Fast local Markdown viewer/editor built for huge files and folders.",
+      "accent": "#e05d7b",
+      "icon": "MR",
+      "category": "Work Stuff",
+      "packagePreference": "portable",
+      "status": "available",
+      "visible": true
+    },
+    {
+      "id": "opensplit",
+      "name": "OpenSplit",
+      "repo": "OpenSplit",
+      "description": "Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.",
+      "accent": "#4fb6d8",
+      "icon": "OS",
+      "category": "Work Stuff",
+      "packagePreference": "portable",
+      "status": "available",
+      "visible": true
+    },
+    {
+      "id": "venice-media-local",
+      "name": "Venice Media",
+      "repo": "VeniceMediaLocal",
+      "description": "Local Venice API media workspace for images, video, music, voice, and cleanup.",
+      "accent": "#34c6a3",
+      "icon": "VM",
+      "category": "Work Stuff",
+      "packagePreference": "portable",
+      "status": "available",
+      "visible": true
+    },
+    {
+      "id": "purpleplanet",
+      "name": "PurplePlanet",
+      "repo": "PurplePlanet",
+      "description": "Luminous Three.js planet motion art for live wallpapers and screensavers.",
+      "accent": "#8c65df",
+      "icon": "PP",
+      "category": "Fun Stuff",
+      "packagePreference": "portable",
+      "status": "available",
+      "demoUrl": "https://nekolegends.com/res/projects/purplePlanet/",
+      "visible": true
+    },
+    {
+      "id": "stargaze",
+      "name": "StarGaze",
+      "repo": "StarGaze",
+      "description": "Glittering Three.js starfield wallpaper and screensaver with tunable motion.",
+      "accent": "#6b7cff",
+      "icon": "SG",
+      "category": "Fun Stuff",
+      "packagePreference": "portable",
+      "status": "available",
+      "demoUrl": "https://nekolegends.com/res/projects/starGaze/",
+      "visible": true
+    }
+  ]
+}

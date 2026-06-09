@@ -18,6 +18,8 @@ const FALLBACK_WINDOW_WIDTH: u32 = 720;
 const FALLBACK_WINDOW_HEIGHT: u32 = 520;
 const GITHUB_OWNER: &str = "neko-legends";
 const CONTROL_CENTER_REPO: &str = "NekoLegendsControlCenter";
+const TOOLS_CATALOG_URL: &str = "https://nekolegends.com/res/nekoLegendsControlCenter/tools.json";
+const UNDER_DEVELOPMENT_CATEGORY: &str = "Under Development";
 const VENICE_MEDIA_LOCAL_ID: &str = "venice-media-local";
 const VENICE_MEDIA_LOCAL_DISPLAY_NAME: &str = "Venice Media Local";
 
@@ -44,8 +46,23 @@ struct LauncherApp {
     package_preference: PackagePreference,
     package_path: Option<String>,
     demo_url: Option<String>,
+    #[serde(default)]
+    status: ToolStatus,
     #[serde(default = "default_true")]
     visible: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+enum ToolStatus {
+    Available,
+    ComingSoon,
+}
+
+impl Default for ToolStatus {
+    fn default() -> Self {
+        Self::Available
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -169,8 +186,21 @@ struct ControlCenterUpdate {
     update_available: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ToolsCatalog {
+    #[serde(default = "default_catalog_version")]
+    catalog_version: u32,
+    updated_at: Option<String>,
+    tools: Vec<LauncherApp>,
+}
+
 fn default_true() -> bool {
     true
+}
+
+fn default_catalog_version() -> u32 {
+    2
 }
 
 fn default_category() -> String {
@@ -178,7 +208,11 @@ fn default_category() -> String {
 }
 
 fn default_categories() -> Vec<String> {
-    vec!["Work Stuff".to_string(), "Fun Stuff".to_string()]
+    vec![
+        "Work Stuff".to_string(),
+        "Fun Stuff".to_string(),
+        UNDER_DEVELOPMENT_CATEGORY.to_string(),
+    ]
 }
 
 fn normalize_categories(categories: Vec<String>) -> Vec<String> {
@@ -198,18 +232,18 @@ fn normalize_categories(categories: Vec<String>) -> Vec<String> {
 
 fn default_apps() -> Vec<LauncherApp> {
     vec![
-        app("batchlapse", "BatchLapse", "BatchLapse", "Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs.", "#5b8def", "BL", "Work Stuff", None),
-        app("depth-map-ai-generator", "DepthMap AI", "DepthMapAIGenerator", "Batch depth-map and WebP generator for local AI image workflows.", "#43b883", "DM", "Work Stuff", None),
-        app("image-to-ascii-3d", "ASCII 3D", "ImageToASCII3D", "Image-to-ASCII converter with optional depth-map driven 3D parallax exports.", "#f0a848", "A3", "Work Stuff", None),
-        app("markrush", "MarkRush", "MarkRush", "Fast local Markdown viewer/editor built for huge files and folders.", "#e05d7b", "MR", "Work Stuff", None),
-        app("opensplit", "OpenSplit", "OpenSplit", "Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.", "#4fb6d8", "OS", "Work Stuff", None),
-        app("venice-media-local", "Venice Media", "VeniceMediaLocal", "Local Venice API media workspace for images, video, music, voice, and cleanup.", "#34c6a3", "VM", "Work Stuff", None),
-        app("purpleplanet", "PurplePlanet", "PurplePlanet", "Luminous Three.js planet motion art for live wallpapers and screensavers.", "#8c65df", "PP", "Fun Stuff", Some("https://nekolegends.com/res/projects/purplePlanet/")),
-        app("stargaze", "StarGaze", "StarGaze", "Glittering Three.js starfield wallpaper and screensaver with tunable motion.", "#6b7cff", "SG", "Fun Stuff", Some("https://nekolegends.com/res/projects/starGaze/")),
+        app("batchlapse", "BatchLapse", "BatchLapse", "Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs.", "#5b8def", "BL", "Work Stuff", ToolStatus::Available, None),
+        app("depth-map-ai-generator", "DepthMap AI", "DepthMapAIGenerator", "Batch depth-map and WebP generator for local AI image workflows.", "#43b883", "DM", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
+        app("image-to-ascii-3d", "ASCII 3D", "ImageToASCII3D", "Image-to-ASCII converter with optional depth-map driven 3D parallax exports.", "#f0a848", "A3", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
+        app("markrush", "MarkRush", "MarkRush", "Fast local Markdown viewer/editor built for huge files and folders.", "#e05d7b", "MR", "Work Stuff", ToolStatus::Available, None),
+        app("opensplit", "OpenSplit", "OpenSplit", "Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.", "#4fb6d8", "OS", "Work Stuff", ToolStatus::Available, None),
+        app("venice-media-local", "Venice Media", "VeniceMediaLocal", "Local Venice API media workspace for images, video, music, voice, and cleanup.", "#34c6a3", "VM", "Work Stuff", ToolStatus::Available, None),
+        app("purpleplanet", "PurplePlanet", "PurplePlanet", "Luminous Three.js planet motion art for live wallpapers and screensavers.", "#8c65df", "PP", "Fun Stuff", ToolStatus::Available, Some("https://nekolegends.com/res/projects/purplePlanet/")),
+        app("stargaze", "StarGaze", "StarGaze", "Glittering Three.js starfield wallpaper and screensaver with tunable motion.", "#6b7cff", "SG", "Fun Stuff", ToolStatus::Available, Some("https://nekolegends.com/res/projects/starGaze/")),
     ]
 }
 
-fn app(id: &str, name: &str, repo: &str, description: &str, accent: &str, icon: &str, category: &str, demo_url: Option<&str>) -> LauncherApp {
+fn app(id: &str, name: &str, repo: &str, description: &str, accent: &str, icon: &str, category: &str, status: ToolStatus, demo_url: Option<&str>) -> LauncherApp {
     LauncherApp {
         id: id.to_string(),
         name: name.to_string(),
@@ -228,6 +262,7 @@ fn app(id: &str, name: &str, repo: &str, description: &str, accent: &str, icon: 
         package_preference: PackagePreference::Portable,
         package_path: None,
         demo_url: demo_url.map(str::to_string),
+        status,
         visible: true,
     }
 }
@@ -244,6 +279,10 @@ fn settings_path(app: &AppHandle) -> Result<PathBuf, String> {
 
 fn apps_path(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(app_data_dir(app)?.join("apps.json"))
+}
+
+fn tools_catalog_path(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(app_data_dir(app)?.join("tools-catalog.json"))
 }
 
 fn read_json_file<T>(path: &Path, fallback: T) -> T
@@ -267,6 +306,143 @@ where
     fs::write(path, raw).map_err(|err| err.to_string())
 }
 
+fn builtin_tools_catalog() -> ToolsCatalog {
+    ToolsCatalog {
+        catalog_version: 1,
+        updated_at: Some("built-in".to_string()),
+        tools: default_apps(),
+    }
+}
+
+fn clean_catalog_id(value: &str) -> Option<String> {
+    let value = value.trim().to_ascii_lowercase();
+    if value.is_empty()
+        || !value
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || character == '-' || character == '_')
+    {
+        return None;
+    }
+    Some(value)
+}
+
+fn clean_catalog_repo(value: &str) -> Option<String> {
+    let trimmed = value.trim().trim_matches('/');
+    let repo = trimmed
+        .strip_prefix(&format!("{}/", GITHUB_OWNER))
+        .unwrap_or(trimmed)
+        .trim();
+    if repo.is_empty()
+        || repo.contains('/')
+        || repo.contains('\\')
+        || repo.contains("..")
+        || !repo
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.'))
+    {
+        return None;
+    }
+    Some(repo.to_string())
+}
+
+fn clean_optional_https_url(value: Option<String>) -> Option<String> {
+    value
+        .map(|url| url.trim().to_string())
+        .filter(|url| url.starts_with("https://"))
+}
+
+fn clean_hex_color(value: &str, fallback: &str) -> String {
+    let value = value.trim();
+    if value.len() == 7
+        && value.starts_with('#')
+        && value
+            .chars()
+            .skip(1)
+            .all(|character| character.is_ascii_hexdigit())
+    {
+        value.to_string()
+    } else {
+        fallback.to_string()
+    }
+}
+
+fn default_category_if_empty(value: &str) -> String {
+    let value = value.trim();
+    if value.is_empty() {
+        default_category()
+    } else {
+        value.to_string()
+    }
+}
+
+fn clean_catalog_tool(mut launcher_app: LauncherApp) -> Option<LauncherApp> {
+    launcher_app.id = clean_catalog_id(&launcher_app.id)?;
+    launcher_app.repo = clean_catalog_repo(&launcher_app.repo)?;
+    launcher_app.name = launcher_app.name.trim().to_string();
+    if launcher_app.name.is_empty() {
+        launcher_app.name = launcher_app.repo.clone();
+    }
+    launcher_app.description = launcher_app.description.trim().to_string();
+    if launcher_app.description.is_empty() {
+        launcher_app.description = "Neko Legends tool.".to_string();
+    }
+    launcher_app.accent = clean_hex_color(&launcher_app.accent, "#ff6a00");
+    launcher_app.icon = launcher_app.icon.trim().chars().take(4).collect();
+    if launcher_app.icon.is_empty() {
+        launcher_app.icon = launcher_app
+            .name
+            .chars()
+            .filter(|character| character.is_ascii_alphanumeric())
+            .take(2)
+            .collect::<String>()
+            .to_ascii_uppercase();
+    }
+    launcher_app.category = default_category_if_empty(&launcher_app.category);
+    if launcher_app.status == ToolStatus::ComingSoon {
+        launcher_app.category = UNDER_DEVELOPMENT_CATEGORY.to_string();
+    }
+    launcher_app.demo_url = clean_optional_https_url(launcher_app.demo_url);
+    launcher_app.executable_path = None;
+    launcher_app.installed_version = None;
+    launcher_app.latest_version = None;
+    launcher_app.release_url = None;
+    launcher_app.release_checked_at = None;
+    launcher_app.release_notes = None;
+    launcher_app.release_options = Vec::new();
+    launcher_app.package_path = None;
+    Some(launcher_app)
+}
+
+fn clean_tools_catalog(catalog: ToolsCatalog) -> Result<ToolsCatalog, String> {
+    let mut tools = Vec::new();
+    for launcher_app in catalog.tools {
+        if let Some(launcher_app) = clean_catalog_tool(launcher_app) {
+            if !tools.iter().any(|existing: &LauncherApp| existing.id == launcher_app.id) {
+                tools.push(launcher_app);
+            }
+        }
+    }
+    if tools.is_empty() {
+        return Err("Tools catalog did not include any usable tools.".to_string());
+    }
+    Ok(ToolsCatalog {
+        catalog_version: catalog.catalog_version,
+        updated_at: catalog.updated_at,
+        tools,
+    })
+}
+
+fn read_tools_catalog(app: &AppHandle) -> ToolsCatalog {
+    let fallback = builtin_tools_catalog();
+    let catalog = tools_catalog_path(app)
+        .map(|path| read_json_file(&path, fallback.clone()))
+        .unwrap_or(fallback.clone());
+    match clean_tools_catalog(catalog) {
+        Ok(catalog) if catalog.catalog_version >= fallback.catalog_version => catalog,
+        _ => fallback,
+    }
+}
+
 fn read_settings(app: &AppHandle) -> AppSettings {
     let mut settings = settings_path(app)
         .map(|path| read_json_file(&path, AppSettings::default()))
@@ -282,14 +458,13 @@ fn read_apps(app: &AppHandle) -> Vec<LauncherApp> {
     let saved = apps_path(app)
         .map(|path| read_json_file(&path, Vec::<LauncherApp>::new()))
         .unwrap_or_default();
-    let mut apps = merge_default_apps(saved);
+    let mut apps = merge_catalog_apps(saved, read_tools_catalog(app).tools);
     auto_detect_installed_apps(&mut apps);
     apps
 }
 
-fn merge_default_apps(saved: Vec<LauncherApp>) -> Vec<LauncherApp> {
+fn merge_catalog_apps(saved: Vec<LauncherApp>, defaults: Vec<LauncherApp>) -> Vec<LauncherApp> {
     let mut merged = Vec::new();
-    let defaults = default_apps();
 
     for saved_app in saved {
         if let Some(default_app) = defaults.iter().find(|candidate| candidate.id == saved_app.id) {
@@ -304,6 +479,13 @@ fn merge_default_apps(saved: Vec<LauncherApp>) -> Vec<LauncherApp> {
             app.package_preference = saved_app.package_preference;
             app.package_path = saved_app.package_path;
             app.visible = saved_app.visible;
+            if app.status == ToolStatus::ComingSoon {
+                app.latest_version = None;
+                app.release_url = None;
+                app.release_checked_at = None;
+                app.release_notes = Some("Coming soon.".to_string());
+                app.release_options = Vec::new();
+            }
             if !saved_app.category.trim().is_empty() {
                 app.category = saved_app.category;
             }
@@ -1229,6 +1411,30 @@ fn get_state(app: AppHandle) -> Result<ControlCenterState, String> {
 }
 
 #[tauri::command]
+async fn refresh_tools_catalog(app: AppHandle) -> Result<Vec<LauncherApp>, String> {
+    let client = github_client()?;
+    let response = client
+        .get(TOOLS_CATALOG_URL)
+        .send()
+        .await
+        .map_err(|err| err.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("Tools catalog returned {}.", response.status()));
+    }
+
+    let bytes = response.bytes().await.map_err(|err| err.to_string())?;
+    let catalog = serde_json::from_slice::<ToolsCatalog>(&bytes).map_err(|err| err.to_string())?;
+    let mut catalog = clean_tools_catalog(catalog)?;
+    if catalog.updated_at.is_none() {
+        catalog.updated_at = Some(Utc::now().to_rfc3339());
+    }
+    write_json_file(&tools_catalog_path(&app)?, &catalog)?;
+    let apps = read_apps(&app);
+    save_apps(&app, &apps)?;
+    Ok(apps)
+}
+
+#[tauri::command]
 fn save_settings(app: AppHandle, request: SaveSettingsRequest) -> Result<AppSettings, String> {
     let mut settings = read_settings(&app);
     if let Some(theme) = request.theme {
@@ -1270,7 +1476,7 @@ fn get_default_install_dir() -> Result<String, String> {
 
 #[tauri::command]
 fn save_layout(app: AppHandle, request: SaveLayoutRequest) -> Result<ControlCenterState, String> {
-    let mut next_apps = merge_default_apps(request.apps);
+    let mut next_apps = merge_catalog_apps(request.apps, read_tools_catalog(&app).tools);
     let mut settings = read_settings(&app);
     if next_apps.iter().all(|candidate| !candidate.visible) {
         for candidate in next_apps.iter_mut() {
@@ -1291,7 +1497,7 @@ fn reset_layout(app: AppHandle) -> Result<ControlCenterState, String> {
     let mut settings = read_settings(&app);
     let mut reset_apps = Vec::new();
 
-    for mut default_app in default_apps() {
+    for mut default_app in read_tools_catalog(&app).tools {
         if let Some(existing) = current_apps.iter().find(|candidate| candidate.id == default_app.id) {
             default_app.executable_path = existing.executable_path.clone();
             default_app.installed_version = existing.installed_version.clone();
@@ -1632,11 +1838,23 @@ fn open_install_folder(app: AppHandle, request: LaunchRequest) -> Result<(), Str
 
 #[tauri::command]
 async fn scan_releases(app: AppHandle) -> Result<Vec<LauncherApp>, String> {
+    let _ = refresh_tools_catalog(app.clone()).await;
     let client = github_client()?;
     let mut apps = read_apps(&app);
     let checked_at = Utc::now().to_rfc3339();
 
     for launcher_app in apps.iter_mut() {
+        if launcher_app.status == ToolStatus::ComingSoon {
+            launcher_app.latest_version = None;
+            launcher_app.release_url = Some(format!(
+                "https://github.com/{}/{}/releases",
+                GITHUB_OWNER, launcher_app.repo
+            ));
+            launcher_app.release_notes = Some("Coming soon.".to_string());
+            launcher_app.release_checked_at = Some(checked_at.clone());
+            launcher_app.release_options = Vec::new();
+            continue;
+        }
         match fetch_releases(&client, &launcher_app.repo).await {
             Ok(releases) => {
                 if let Some(release) = releases.first() {
@@ -1676,6 +1894,9 @@ async fn download_release(
         .iter()
         .position(|candidate| candidate.id == request.app_id)
         .ok_or_else(|| "App was not found".to_string())?;
+    if apps[index].status == ToolStatus::ComingSoon {
+        return Err(format!("{} is coming soon.", apps[index].name));
+    }
     let repo = apps[index].repo.clone();
     let package_preference = request
         .package_preference
@@ -1805,6 +2026,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             get_state,
+            refresh_tools_catalog,
             save_settings,
             save_executable,
             get_default_install_dir,
