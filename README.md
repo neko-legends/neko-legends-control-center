@@ -21,6 +21,14 @@ The tools are for humans building manually, humans working with AI agents, and A
 - Enable local AI Agent control for scripted status checks, downloads, updates, and launches.
 - Self-update the Control Center from the latest portable release when a newer version is available.
 
+## Launching Apps
+
+There are three ways to launch an installed app:
+
+- Double-click the app tile.
+- Right-click the app tile and choose Launch.
+- Select the app, then click Launch in the details panel.
+
 ## Current Tools
 
 ### Work Stuff
