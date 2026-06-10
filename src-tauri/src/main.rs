@@ -200,7 +200,7 @@ fn default_true() -> bool {
 }
 
 fn default_catalog_version() -> u32 {
-    2
+    3
 }
 
 fn default_category() -> String {
@@ -233,6 +233,7 @@ fn normalize_categories(categories: Vec<String>) -> Vec<String> {
 fn default_apps() -> Vec<LauncherApp> {
     vec![
         app("batchlapse", "BatchLapse", "BatchLapse", "Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs.", "#5b8def", "BL", "Work Stuff", ToolStatus::Available, None),
+        app("cutscene-converter", "Cutscene Converter", "CutsceneConverter", "Prepare AI-generated videos for game engines with batch conversion, trimming, scaling, and combining.", "#ff8a3d", "CC", "Work Stuff", ToolStatus::Available, None),
         app("depth-map-ai-generator", "DepthMap AI", "DepthMapAIGenerator", "Batch depth-map and WebP generator for local AI image workflows.", "#43b883", "DM", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
         app("image-to-ascii-3d", "ASCII 3D", "ImageToASCII3D", "Image-to-ASCII converter with optional depth-map driven 3D parallax exports.", "#f0a848", "A3", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
         app("markrush", "MarkRush", "MarkRush", "Fast local Markdown viewer/editor built for huge files and folders.", "#e05d7b", "MR", "Work Stuff", ToolStatus::Available, None),
@@ -308,7 +309,7 @@ where
 
 fn builtin_tools_catalog() -> ToolsCatalog {
     ToolsCatalog {
-        catalog_version: 1,
+        catalog_version: default_catalog_version(),
         updated_at: Some("built-in".to_string()),
         tools: default_apps(),
     }

@@ -22,14 +22,22 @@ The tools are for humans building manually, humans working with AI agents, and A
 
 ## Current Tools
 
+### Work Stuff
+
 | App | Repository | Purpose |
 | --- | --- | --- |
-| BatchLapse | `neko-legends/BatchLapse` | Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs. |
-| MarkRush | `neko-legends/MarkRush` | Fast local Markdown viewer/editor built for huge files and folders. |
-| OpenSplit | `neko-legends/OpenSplit` | Multi-pane terminal harness for AI coding agents, shells, and SSH sessions. |
-| Venice Media | `neko-legends/VeniceMediaLocal` | Local Venice API media workspace for images, video, music, voice, and cleanup. |
-| PurplePlanet | `neko-legends/PurplePlanet` | Three.js planet motion art for live wallpapers and screensavers. |
-| StarGaze | `neko-legends/StarGaze` | Three.js starfield wallpaper and screensaver with tunable motion. |
+| BatchLapse | [neko-legends/BatchLapse](https://github.com/neko-legends/BatchLapse) | Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs. |
+| Cutscene Converter | [neko-legends/CutsceneConverter](https://github.com/neko-legends/CutsceneConverter) | Prepare AI-generated videos for game engines with batch conversion, trimming, scaling, and combining. |
+| MarkRush | [neko-legends/MarkRush](https://github.com/neko-legends/MarkRush) | Fast local Markdown viewer/editor built for huge files and folders. |
+| OpenSplit | [neko-legends/OpenSplit](https://github.com/neko-legends/OpenSplit) | Multi-pane terminal harness for AI coding agents, shells, and SSH sessions. |
+| Venice Media | [neko-legends/VeniceMediaLocal](https://github.com/neko-legends/VeniceMediaLocal) | Local Venice API media workspace for images, video, music, voice, and cleanup. |
+
+### Fun Stuff
+
+| App | Repository | Purpose |
+| --- | --- | --- |
+| PurplePlanet | [neko-legends/PurplePlanet](https://github.com/neko-legends/PurplePlanet) | Three.js planet motion art for live wallpapers and screensavers. |
+| StarGaze | [neko-legends/StarGaze](https://github.com/neko-legends/StarGaze) | Three.js starfield wallpaper and screensaver with tunable motion. |
 
 More tools are in progress. The README will grow as each one is ready to ship.
 
@@ -73,14 +81,19 @@ Run:
 npm run build:portable
 ```
 
-The build script creates two useful outputs:
+The build script creates one portable app:
 
-- `src-tauri\target-portable\release\neko-legends-control-center-portable.exe`
 - `release\NekoLegendsControlCenter\neko-legends-control-center-portable.exe`
 
 The `release\NekoLegendsControlCenter` folder is the distribution-friendly portable package. Keep its `apps` folder beside `neko-legends-control-center-portable.exe`; downloaded apps install there by default.
 
-The `release` and `src-tauri\target-*` folders are generated build output and are intentionally ignored by Git.
+To launch the current portable build:
+
+```powershell
+npm run run:portable
+```
+
+The `src-tauri\target-*` folders are temporary build output. The `release\NekoLegendsControlCenter` folder is the only portable package to run or upload, and generated build output is intentionally ignored by Git.
 
 ## Development
 
@@ -106,6 +119,12 @@ Build the portable desktop app:
 
 ```powershell
 npm run build:portable
+```
+
+Run the portable desktop app:
+
+```powershell
+npm run run:portable
 ```
 
 The app is built with React, Vite, TypeScript, Tauri, and Rust.

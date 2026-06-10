@@ -1,6 +1,6 @@
 {
-  "catalogVersion": 2,
-  "updatedAt": "2026-06-08",
+  "catalogVersion": 3,
+  "updatedAt": "2026-06-10",
   "tools": [
     {
       "id": "batchlapse",
@@ -9,6 +9,18 @@
       "description": "Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs.",
       "accent": "#5b8def",
       "icon": "BL",
+      "category": "Work Stuff",
+      "packagePreference": "portable",
+      "status": "available",
+      "visible": true
+    },
+    {
+      "id": "cutscene-converter",
+      "name": "Cutscene Converter",
+      "repo": "CutsceneConverter",
+      "description": "Prepare AI-generated videos for game engines with batch conversion, trimming, scaling, and combining.",
+      "accent": "#ff8a3d",
+      "icon": "CC",
       "category": "Work Stuff",
       "packagePreference": "portable",
       "status": "available",

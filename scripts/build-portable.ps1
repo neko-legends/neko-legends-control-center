@@ -34,26 +34,29 @@ try {
   }
 
   $sourceExe = Join-Path $releaseDir 'neko-legends-control-center.exe'
-  $portableExe = Join-Path $releaseDir 'neko-legends-control-center-portable.exe'
+  $staleTargetPortableExe = Join-Path $releaseDir 'neko-legends-control-center-portable.exe'
+  $portableExe = Join-Path $portablePackageDir 'neko-legends-control-center-portable.exe'
 
   if (-not (Test-Path -LiteralPath $sourceExe)) {
     throw "Portable build failed because $sourceExe was not created."
   }
 
+  if (Test-Path -LiteralPath $staleTargetPortableExe) {
+    Remove-Item -LiteralPath $staleTargetPortableExe -Force
+  }
+
+  New-Item -ItemType Directory -Force -Path $portablePackageDir | Out-Null
+  New-Item -ItemType Directory -Force -Path (Join-Path $portablePackageDir 'apps') | Out-Null
   if (Test-Path -LiteralPath $portableExe) {
     Remove-Item -LiteralPath $portableExe -Force
   }
-
   Move-Item -LiteralPath $sourceExe -Destination $portableExe -Force
-  New-Item -ItemType Directory -Force -Path $portablePackageDir | Out-Null
-  New-Item -ItemType Directory -Force -Path (Join-Path $portablePackageDir 'apps') | Out-Null
-  Copy-Item -LiteralPath $portableExe -Destination (Join-Path $portablePackageDir 'neko-legends-control-center-portable.exe') -Force
   Set-Content -LiteralPath (Join-Path $portablePackageDir 'README.txt') -Value @(
     'Neko Legends Control Center Portable',
     '',
     'Keep the apps folder beside the launcher. Downloaded Neko Legends apps install there by default.'
   )
-  Write-Host "Portable build created: $portableExe"
+  Write-Host "Portable app created: $portableExe"
   Write-Host "Portable package created: $portablePackageDir"
 } finally {
   Pop-Location
