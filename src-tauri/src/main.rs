@@ -90,6 +90,8 @@ struct ReleaseOption {
 struct AppSettings {
     theme: String,
     compact_labels: bool,
+    #[serde(default = "default_true")]
+    use_remote_catalog: bool,
     #[serde(default = "default_categories")]
     categories: Vec<String>,
     window_width: Option<u32>,
@@ -101,6 +103,7 @@ impl Default for AppSettings {
         Self {
             theme: "neko-tron".to_string(),
             compact_labels: false,
+            use_remote_catalog: true,
             categories: default_categories(),
             window_width: None,
             window_height: None,
@@ -122,6 +125,7 @@ struct ControlCenterState {
 struct SaveSettingsRequest {
     theme: Option<String>,
     compact_labels: Option<bool>,
+    use_remote_catalog: Option<bool>,
     categories: Option<Vec<String>>,
 }
 
@@ -443,6 +447,48 @@ fn read_tools_catalog(app: &AppHandle) -> ToolsCatalog {
     }
 }
 
+fn read_local_tools_catalog() -> Option<ToolsCatalog> {
+    let manifest_catalog = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("catalog").join("tools.json");
+    let mut candidates = vec![manifest_catalog];
+
+    if let Ok(current_dir) = std::env::current_dir() {
+        candidates.push(current_dir.join("catalog").join("tools.json"));
+        candidates.push(current_dir.join("..").join("catalog").join("tools.json"));
+    }
+
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            candidates.push(exe_dir.join("catalog").join("tools.json"));
+            candidates.push(exe_dir.join("..").join("catalog").join("tools.json"));
+            candidates.push(exe_dir.join("..").join("..").join("catalog").join("tools.json"));
+        }
+    }
+
+    for candidate in candidates {
+        if !candidate.exists() {
+            continue;
+        }
+        if let Ok(raw) = fs::read_to_string(&candidate) {
+            if let Ok(catalog) = serde_json::from_str::<ToolsCatalog>(&raw) {
+                if let Ok(catalog) = clean_tools_catalog(catalog) {
+                    return Some(catalog);
+                }
+            }
+        }
+    }
+
+    None
+}
+
+fn read_effective_tools_catalog(app: &AppHandle) -> ToolsCatalog {
+    let settings = read_settings(app);
+    if settings.use_remote_catalog {
+        read_tools_catalog(app)
+    } else {
+        read_local_tools_catalog().unwrap_or_else(builtin_tools_catalog)
+    }
+}
+
 fn read_settings(app: &AppHandle) -> AppSettings {
     let mut settings = settings_path(app)
         .map(|path| read_json_file(&path, AppSettings::default()))
@@ -458,7 +504,7 @@ fn read_apps(app: &AppHandle) -> Vec<LauncherApp> {
     let saved = apps_path(app)
         .map(|path| read_json_file(&path, Vec::<LauncherApp>::new()))
         .unwrap_or_default();
-    let mut apps = merge_catalog_apps(saved, read_tools_catalog(app).tools);
+    let mut apps = merge_catalog_apps(saved, read_effective_tools_catalog(app).tools);
     auto_detect_installed_apps(&mut apps);
     apps
 }
@@ -1412,6 +1458,12 @@ fn get_state(app: AppHandle) -> Result<ControlCenterState, String> {
 
 #[tauri::command]
 async fn refresh_tools_catalog(app: AppHandle) -> Result<Vec<LauncherApp>, String> {
+    if !read_settings(&app).use_remote_catalog {
+        let apps = read_apps(&app);
+        save_apps(&app, &apps)?;
+        return Ok(apps);
+    }
+
     let client = github_client()?;
     let response = client
         .get(TOOLS_CATALOG_URL)
@@ -1442,6 +1494,9 @@ fn save_settings(app: AppHandle, request: SaveSettingsRequest) -> Result<AppSett
     }
     if let Some(compact_labels) = request.compact_labels {
         settings.compact_labels = compact_labels;
+    }
+    if let Some(use_remote_catalog) = request.use_remote_catalog {
+        settings.use_remote_catalog = use_remote_catalog;
     }
     if let Some(categories) = request.categories {
         settings.categories = normalize_categories(categories);
@@ -1476,7 +1531,7 @@ fn get_default_install_dir() -> Result<String, String> {
 
 #[tauri::command]
 fn save_layout(app: AppHandle, request: SaveLayoutRequest) -> Result<ControlCenterState, String> {
-    let mut next_apps = merge_catalog_apps(request.apps, read_tools_catalog(&app).tools);
+    let mut next_apps = merge_catalog_apps(request.apps, read_effective_tools_catalog(&app).tools);
     let mut settings = read_settings(&app);
     if next_apps.iter().all(|candidate| !candidate.visible) {
         for candidate in next_apps.iter_mut() {
@@ -1497,7 +1552,7 @@ fn reset_layout(app: AppHandle) -> Result<ControlCenterState, String> {
     let mut settings = read_settings(&app);
     let mut reset_apps = Vec::new();
 
-    for mut default_app in read_tools_catalog(&app).tools {
+    for mut default_app in read_effective_tools_catalog(&app).tools {
         if let Some(existing) = current_apps.iter().find(|candidate| candidate.id == default_app.id) {
             default_app.executable_path = existing.executable_path.clone();
             default_app.installed_version = existing.installed_version.clone();

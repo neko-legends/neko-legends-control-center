@@ -51,6 +51,7 @@ type ReleaseOption = {
 type AppSettings = {
   theme: ThemeId
   compactLabels: boolean
+  useRemoteCatalog: boolean
   categories: string[]
 }
 
@@ -95,7 +96,7 @@ const defaultCategories = ['Work Stuff', 'Fun Stuff', 'Under Development']
 const githubOwner = 'neko-legends'
 
 const fallbackState: ControlCenterState = {
-  settings: { theme: 'neko-tron', compactLabels: false, categories: defaultCategories },
+  settings: { theme: 'neko-tron', compactLabels: false, useRemoteCatalog: true, categories: defaultCategories },
   buildVersion: 'dev',
   dataDir: '',
   apps: [
@@ -768,6 +769,24 @@ export default function App() {
     }
   }
 
+  async function setUseRemoteCatalog(useRemoteCatalog: boolean) {
+    setState((current) => ({ ...current, settings: { ...current.settings, useRemoteCatalog } }))
+    if (!isTauriRuntime()) {
+      setNotice(useRemoteCatalog ? 'Remote catalog enabled' : 'Local catalog enabled')
+      return
+    }
+    setBusy(true)
+    try {
+      await call<AppSettings>('save_settings', { request: { useRemoteCatalog } })
+      await loadState()
+      setNotice(useRemoteCatalog ? 'Using remote tools catalog' : 'Using local tools catalog')
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function persistLayout(apps: LauncherApp[], message: string, categories = layoutCategories) {
     const nextCategories = normalizeCategories(categories)
     setState((current) => ({ ...current, apps, settings: { ...current.settings, categories: nextCategories } }))
@@ -1426,6 +1445,15 @@ export default function App() {
                 onChange={(event) => void setCompactLabels(event.currentTarget.checked)}
               />
               <span>Compact labels</span>
+            </label>
+            <label className="toggle-row" title="Use the hosted tools.json catalog. Turn off to test the local catalog file.">
+              <input
+                type="checkbox"
+                checked={state.settings.useRemoteCatalog}
+                onChange={(event) => void setUseRemoteCatalog(event.currentTarget.checked)}
+                disabled={busy}
+              />
+              <span>Remote catalog</span>
             </label>
             <button className="secondary-action reset-action" type="button" onClick={resetLayout} disabled={busy}>
               Reset layout

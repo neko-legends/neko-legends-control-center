@@ -57,6 +57,7 @@ Catalog behavior:
 - If the hosted file is unavailable, the app uses the last cached catalog.
 - If there is no cache yet, the app uses the built-in fallback list.
 - The hosted file is metadata only. It can define tools, categories, colors, demo links, package preference, visibility, and status. It cannot define commands to run.
+- The settings panel has a Remote catalog toggle. It is on by default. Turn it off to test the local `catalog\tools.json` before uploading it to the website.
 
 Catalog status values:
 
@@ -85,7 +86,7 @@ The build script creates one portable app:
 
 - `release\NekoLegendsControlCenter\neko-legends-control-center-portable.exe`
 
-The `release\NekoLegendsControlCenter` folder is the distribution-friendly portable package. Keep its `apps` folder beside `neko-legends-control-center-portable.exe`; downloaded apps install there by default.
+The `release\NekoLegendsControlCenter` folder is the distribution-friendly portable package. Keep its `apps` and `catalog` folders beside `neko-legends-control-center-portable.exe`; downloaded apps install there by default, and local catalog testing reads from `catalog\tools.json`.
 
 To launch the current portable build:
 

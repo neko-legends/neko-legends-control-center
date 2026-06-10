@@ -47,10 +47,12 @@ try {
 
   New-Item -ItemType Directory -Force -Path $portablePackageDir | Out-Null
   New-Item -ItemType Directory -Force -Path (Join-Path $portablePackageDir 'apps') | Out-Null
+  New-Item -ItemType Directory -Force -Path (Join-Path $portablePackageDir 'catalog') | Out-Null
   if (Test-Path -LiteralPath $portableExe) {
     Remove-Item -LiteralPath $portableExe -Force
   }
   Move-Item -LiteralPath $sourceExe -Destination $portableExe -Force
+  Copy-Item -LiteralPath (Join-Path $rootDir 'catalog\tools.json') -Destination (Join-Path $portablePackageDir 'catalog\tools.json') -Force
   Set-Content -LiteralPath (Join-Path $portablePackageDir 'README.txt') -Value @(
     'Neko Legends Control Center Portable',
     '',
