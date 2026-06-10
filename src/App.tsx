@@ -100,7 +100,6 @@ const fallbackState: ControlCenterState = {
   dataDir: '',
   apps: [
     app('batchlapse', 'BatchLapse', 'BatchLapse', 'Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs.', '#5b8def', 'BL', 'Work Stuff'),
-    app('cutscene-converter', 'Cutscene Converter', 'CutsceneConverter', 'Prepare AI-generated videos for game engines with batch conversion, trimming, scaling, and combining.', '#ff8a3d', 'CC', 'Work Stuff'),
     app('depth-map-ai-generator', 'DepthMap AI', 'DepthMapAIGenerator', 'Batch depth-map and WebP generator for local AI image workflows.', '#43b883', 'DM', 'Under Development', null, 'comingSoon'),
     app('image-to-ascii-3d', 'ASCII 3D', 'ImageToASCII3D', 'Image-to-ASCII converter with optional depth-map driven 3D parallax exports.', '#f0a848', 'A3', 'Under Development', null, 'comingSoon'),
     app('markrush', 'MarkRush', 'MarkRush', 'Fast local Markdown viewer/editor built for huge files and folders.', '#e05d7b', 'MR', 'Work Stuff'),
