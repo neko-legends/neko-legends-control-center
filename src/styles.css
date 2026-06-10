@@ -849,6 +849,11 @@ button {
   text-shadow: 0 0 10px rgb(111 214 255 / 0.34);
 }
 
+.app-status.checking {
+  color: color-mix(in srgb, var(--accent) 45%, #ffd58a);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 36%, transparent);
+}
+
 .app-status.update,
 .app-status.downloading {
   color: var(--warn);

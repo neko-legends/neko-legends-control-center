@@ -192,11 +192,15 @@ function isComingSoon(appInfo: LauncherApp): boolean {
   return appInfo.status === 'comingSoon'
 }
 
+function needsReleaseScan(appInfo: LauncherApp): boolean {
+  return !isComingSoon(appInfo) && !hasKnownRelease(appInfo)
+}
+
 function installStatus(appInfo: LauncherApp): 'installed' | 'missing' {
   return isAppDownloaded(appInfo) ? 'installed' : 'missing'
 }
 
-type AppDisplayStatus = 'coming-soon' | 'missing' | 'installed' | 'update' | 'downloading' | 'failed'
+type AppDisplayStatus = 'checking' | 'coming-soon' | 'missing' | 'installed' | 'update' | 'downloading' | 'failed'
 
 function fileName(path: string | null): string {
   if (!path) return ''
@@ -423,6 +427,7 @@ export default function App() {
     if (activeDownloads.includes(appInfo.id)) return 'downloading'
     if (failedDownloads[appInfo.id]) return 'failed'
     if (!isAppDownloaded(appInfo) && isComingSoon(appInfo)) return 'coming-soon'
+    if (!isAppDownloaded(appInfo) && !hasKnownRelease(appInfo) && !appInfo.releaseCheckedAt) return 'checking'
     if (!isAppDownloaded(appInfo)) return hasKnownRelease(appInfo) ? 'missing' : 'coming-soon'
     if (versionStatus(appInfo) === 'update') return 'update'
     return 'installed'
@@ -433,6 +438,7 @@ export default function App() {
     if (status === 'failed') return 'Failed'
     if (status === 'update') return 'Update Ready'
     if (status === 'installed') return 'Installed'
+    if (status === 'checking') return 'Checking'
     if (status === 'coming-soon') return 'Coming Soon'
     return 'Missing'
   }
@@ -475,6 +481,11 @@ export default function App() {
       setState(nextState)
       const nextVisibleApps = nextState.apps.filter((candidate) => candidate.visible)
       setSelectedId((current) => nextVisibleApps.some((candidate) => candidate.id === current) ? current : nextVisibleApps[0]?.id ?? nextState.apps[0]?.id ?? '')
+      if (nextState.apps.some(needsReleaseScan)) {
+        setNotice('Checking newly added apps...')
+        const apps = await call<LauncherApp[]>('scan_releases')
+        setState((current) => ({ ...current, apps }))
+      }
       setNotice('Ready')
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error))
