@@ -16,13 +16,15 @@ $suiteRoot = Split-Path -Parent $controlCenterRoot
 
 $apps = @(
   @{ Code = 'BL'; Name = 'BatchLapse'; Root = Join-Path $suiteRoot 'BatchLapse'; Tauri = 'src-tauri\icons' },
+  @{ Code = 'CC'; Name = 'CutsceneConverter'; Root = Join-Path $suiteRoot 'CutsceneConverter'; Tauri = 'src-tauri\icons' },
   @{ Code = 'DM'; Name = 'DepthMapAIGenerator'; Root = Join-Path $suiteRoot 'DepthMapAIGenerator'; Tauri = 'src-tauri\icons' },
-  @{ Code = 'OS'; Name = 'OpenSplit'; Root = Join-Path $suiteRoot 'OpenSplit'; Tauri = 'src-tauri\icons' },
-  @{ Code = 'VM'; Name = 'VeniceMediaLocal'; Root = Join-Path $suiteRoot 'VeniceMediaLocal'; Tauri = 'src-tauri\icons' },
+  @{ Code = 'A3'; Name = 'ImageToASCII3D'; Root = Join-Path $suiteRoot 'ImageToASCII3D'; Tauri = 'src-tauri\icons'; WebIcon = 'apps\web\public\icon.png' },
   @{ Code = 'MR'; Name = 'MarkRush'; Root = Join-Path $suiteRoot 'MarkRush'; MarkRush = $true },
+  @{ Code = 'OS'; Name = 'OpenSplit'; Root = Join-Path $suiteRoot 'OpenSplit'; Tauri = 'src-tauri\icons' },
+  @{ Code = 'SI'; Name = 'SeamlessImageEdit'; Root = Join-Path $suiteRoot 'SeamlessImageEdit'; Tauri = 'src-tauri\icons' },
+  @{ Code = 'VM'; Name = 'VeniceMediaLocal'; Root = Join-Path $suiteRoot 'VeniceMediaLocal'; Tauri = 'src-tauri\icons' },
   @{ Code = 'PP'; Name = 'PurplePlanet'; Root = Join-Path $suiteRoot 'PurplePlanet\PurplePlanet\src\PurplePlanet'; DotNetIcon = 'Assets\PurplePlanet.ico'; DotNetPng = 'Assets\PurplePlanet-256.png' },
-  @{ Code = 'SG'; Name = 'StarGaze'; Root = Join-Path $suiteRoot 'StarGaze\StarGaze\src\StarGaze'; DotNetIcon = 'Assets\StarGaze.ico'; DotNetPng = 'Assets\StarGaze-256.png' },
-  @{ Code = 'A3'; Name = 'ImageToASCII3D'; Root = Join-Path $suiteRoot 'ImageToASCII3D\apps\web'; WebIcon = 'public\icon.png' }
+  @{ Code = 'SG'; Name = 'StarGaze'; Root = Join-Path $suiteRoot 'StarGaze\StarGaze\src\StarGaze'; DotNetIcon = 'Assets\StarGaze.ico'; DotNetPng = 'Assets\StarGaze-256.png' }
 )
 
 function New-RoundedRectanglePath {
@@ -46,47 +48,96 @@ function New-LetterBitmap {
   $bmp = New-Object System.Drawing.Bitmap $Size, $Size, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
   $g = [System.Drawing.Graphics]::FromImage($bmp)
   $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
-  $g.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
+  $g.CompositingQuality = [System.Drawing.Drawing2D.CompositingQuality]::HighQuality
+  $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+  $g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
   $g.Clear([System.Drawing.Color]::Transparent)
 
   $scale = $Size / 512.0
   function S([float]$value) { return [float]($value * $scale) }
+  function W([float]$value) { return [float][Math]::Max(1.0, ($value * $scale)) }
 
   $black = [System.Drawing.ColorTranslator]::FromHtml('#050505')
-  $surface = [System.Drawing.ColorTranslator]::FromHtml('#140903')
+  $surface = [System.Drawing.ColorTranslator]::FromHtml('#120602')
   $orange = [System.Drawing.ColorTranslator]::FromHtml('#ff6a00')
   $amber = [System.Drawing.ColorTranslator]::FromHtml('#ffb000')
-  $text = [System.Drawing.ColorTranslator]::FromHtml('#ffd08a')
+  $text = [System.Drawing.ColorTranslator]::FromHtml('#fff0bd')
 
-  $outer = New-Object System.Drawing.RectangleF (S 34), (S 34), (S 444), (S 444)
-  $inner = New-Object System.Drawing.RectangleF (S 54), (S 54), (S 404), (S 404)
-  $outerPath = New-RoundedRectanglePath -Rect $outer -Radius (S 88)
-  $innerPath = New-RoundedRectanglePath -Rect $inner -Radius (S 68)
+  $smallIcon = $Size -le 64
+  $outer = if ($smallIcon) {
+    New-Object System.Drawing.RectangleF (S 18), (S 18), (S 476), (S 476)
+  }
+  else {
+    New-Object System.Drawing.RectangleF (S 30), (S 30), (S 452), (S 452)
+  }
+  $inner = if ($smallIcon) {
+    New-Object System.Drawing.RectangleF (S 32), (S 32), (S 448), (S 448)
+  }
+  else {
+    New-Object System.Drawing.RectangleF (S 52), (S 52), (S 408), (S 408)
+  }
+  $outerRadius = if ($smallIcon) { S 72 } else { S 88 }
+  $innerRadius = if ($smallIcon) { S 58 } else { S 68 }
+  $glowAlpha = if ($smallIcon) { 34 } else { 48 }
+  $outerPenWidth = if ($smallIcon) { W 12 } else { S 10 }
+  $textGlowWide = if ($smallIcon) { W 16 } else { S 18 }
+  $textGlowMid = if ($smallIcon) { W 10 } else { S 10 }
+  $textGlowTight = if ($smallIcon) { W 4 } else { S 5 }
+  $outerPath = New-RoundedRectanglePath -Rect $outer -Radius $outerRadius
+  $innerPath = New-RoundedRectanglePath -Rect $inner -Radius $innerRadius
 
   $g.FillPath((New-Object System.Drawing.SolidBrush $black), $outerPath)
-  $g.FillEllipse((New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(42, $orange))), (S 92), (S 80), (S 328), (S 328))
+  $g.FillEllipse((New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb($glowAlpha, $orange))), (S 86), (S 76), (S 340), (S 340))
   $g.FillPath((New-Object System.Drawing.SolidBrush $surface), $innerPath)
-  $g.DrawPath((New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(180, $orange)), (S 10)), $outerPath)
-  $g.DrawPath((New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(90, $amber)), (S 3)), $innerPath)
-
-  $fontFamily = New-Object System.Drawing.FontFamily 'Segoe UI'
-  $fontStyle = [System.Drawing.FontStyle]::Bold
-  $fontSize = if ($Code.Length -gt 2) { S 188 } else { S 218 }
-  $font = New-Object System.Drawing.Font -ArgumentList $fontFamily, $fontSize, $fontStyle, ([System.Drawing.GraphicsUnit]::Pixel)
-  $format = New-Object System.Drawing.StringFormat
-  $format.Alignment = [System.Drawing.StringAlignment]::Center
-  $format.LineAlignment = [System.Drawing.StringAlignment]::Center
-  $textRect = New-Object System.Drawing.RectangleF (S 34), (S 28), (S 444), (S 444)
-
-  foreach ($offset in @(-8, -4, 4, 8)) {
-    $shadowRect = New-Object System.Drawing.RectangleF ($textRect.X + (S $offset)), $textRect.Y, $textRect.Width, $textRect.Height
-    $g.DrawString($Code, $font, (New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(54, $orange))), $shadowRect, $format)
+  $g.DrawPath((New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(220, $orange), $outerPenWidth)), $outerPath)
+  if (-not $smallIcon) {
+    $g.DrawPath((New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(90, $amber), (S 3))), $innerPath)
   }
-  $g.DrawString($Code, $font, (New-Object System.Drawing.SolidBrush $text), $textRect, $format)
 
-  $font.Dispose()
+  try {
+    $fontFamily = New-Object System.Drawing.FontFamily 'Arial Black'
+  }
+  catch {
+    $fontFamily = New-Object System.Drawing.FontFamily 'Segoe UI'
+  }
+  $fontStyle = [System.Drawing.FontStyle]::Regular
+  $format = [System.Drawing.StringFormat]::GenericTypographic.Clone()
+  $format.FormatFlags = $format.FormatFlags -bor [System.Drawing.StringFormatFlags]::NoClip
+  $baseTextSize = if ($Code.Length -gt 2) { S 360 } else { S 380 }
+  $textBox = if ($smallIcon) {
+    New-Object System.Drawing.RectangleF (S 40), (S 42), (S 432), (S 416)
+  }
+  else {
+    New-Object System.Drawing.RectangleF (S 48), (S 62), (S 416), (S 360)
+  }
+
+  $textPath = New-Object System.Drawing.Drawing2D.GraphicsPath
+  $textPath.AddString($Code, $fontFamily, [int]$fontStyle, $baseTextSize, (New-Object System.Drawing.PointF 0, 0), $format)
+  $textBounds = $textPath.GetBounds()
+  $fitScale = [Math]::Min(($textBox.Width / $textBounds.Width), ($textBox.Height / $textBounds.Height))
+  $matrix = New-Object System.Drawing.Drawing2D.Matrix
+  $matrix.Translate(-$textBounds.X, -$textBounds.Y)
+  $matrix.Scale($fitScale, $fitScale, [System.Drawing.Drawing2D.MatrixOrder]::Append)
+  $fittedWidth = $textBounds.Width * $fitScale
+  $fittedHeight = $textBounds.Height * $fitScale
+  $matrix.Translate(
+    ($textBox.X + (($textBox.Width - $fittedWidth) / 2)),
+    ($textBox.Y + (($textBox.Height - $fittedHeight) / 2)),
+    [System.Drawing.Drawing2D.MatrixOrder]::Append
+  )
+  $textPath.Transform($matrix)
+
+  $g.DrawPath((New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(86, $orange), $textGlowWide)), $textPath)
+  $g.DrawPath((New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(156, $orange), $textGlowMid)), $textPath)
+  $g.DrawPath((New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(205, $amber), $textGlowTight)), $textPath)
+  $g.FillPath((New-Object System.Drawing.SolidBrush $text), $textPath)
+
+  $matrix.Dispose()
+  $textPath.Dispose()
   $fontFamily.Dispose()
   $format.Dispose()
+  $outerPath.Dispose()
+  $innerPath.Dispose()
   $g.Dispose()
   return $bmp
 }
@@ -100,7 +151,7 @@ function Get-PngBytes {
   $bmp.Dispose()
   $bytes = $stream.ToArray()
   $stream.Dispose()
-  return $bytes
+  return ,$bytes
 }
 
 function Save-Png {
@@ -114,22 +165,38 @@ function Save-Ico {
   param([string]$Code, [string]$Path)
 
   New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Path) | Out-Null
-  $bmp = New-LetterBitmap -Code $Code -Size 256
-  $handle = $bmp.GetHicon()
+  $images = @(16, 24, 32, 48, 64, 128, 256) | ForEach-Object {
+    @{ Size = $_; Bytes = ([byte[]](Get-PngBytes -Code $Code -Size $_)) }
+  }
+
+  $fs = [System.IO.File]::Create($Path)
+  $writer = New-Object System.IO.BinaryWriter $fs
   try {
-    $icon = [System.Drawing.Icon]::FromHandle($handle)
-    $fs = [System.IO.File]::Create($Path)
-    try {
-      $icon.Save($fs)
+    $writer.Write([UInt16]0)
+    $writer.Write([UInt16]1)
+    $writer.Write([UInt16]$images.Count)
+
+    $offset = 6 + ($images.Count * 16)
+    foreach ($image in $images) {
+      $dimension = if ($image.Size -ge 256) { [byte]0 } else { [byte]$image.Size }
+      $writer.Write($dimension)
+      $writer.Write($dimension)
+      $writer.Write([byte]0)
+      $writer.Write([byte]0)
+      $writer.Write([UInt16]1)
+      $writer.Write([UInt16]32)
+      $writer.Write([UInt32]$image.Bytes.Length)
+      $writer.Write([UInt32]$offset)
+      $offset += $image.Bytes.Length
     }
-    finally {
-      $fs.Dispose()
-      $icon.Dispose()
+
+    foreach ($image in $images) {
+      $writer.Write($image.Bytes)
     }
   }
   finally {
-    [NativeIconMethods]::DestroyIcon($handle) | Out-Null
-    $bmp.Dispose()
+    $writer.Dispose()
+    $fs.Dispose()
   }
 }
 

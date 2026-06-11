@@ -39,6 +39,7 @@ There are three ways to launch an installed app:
 | Cutscene Converter | [neko-legends/CutsceneConverter](https://github.com/neko-legends/CutsceneConverter) | Prepare AI-generated videos for game engines with batch conversion, trimming, scaling, and combining. |
 | MarkRush | [neko-legends/MarkRush](https://github.com/neko-legends/MarkRush) | Fast local Markdown viewer/editor built for huge files and folders. |
 | OpenSplit | [neko-legends/OpenSplit](https://github.com/neko-legends/OpenSplit) | Multi-pane terminal harness for AI coding agents, shells, and SSH sessions. |
+| Seamless Image Edit | [neko-legends/SeamlessImageEdit](https://github.com/neko-legends/SeamlessImageEdit) | Create seamless and tileable texture outputs from images or folders with seam repair, flattening, and 2x2 preview. |
 | Venice Media | [neko-legends/VeniceMediaLocal](https://github.com/neko-legends/VeniceMediaLocal) | Local Venice API media workspace for images, video, music, voice, and cleanup. |
 
 ### Fun Stuff

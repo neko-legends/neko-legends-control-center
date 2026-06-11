@@ -1,5 +1,5 @@
 {
-  "catalogVersion": 3,
+  "catalogVersion": 4,
   "updatedAt": "2026-06-10",
   "tools": [
     {
@@ -69,6 +69,18 @@
       "description": "Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.",
       "accent": "#4fb6d8",
       "icon": "OS",
+      "category": "Work Stuff",
+      "packagePreference": "portable",
+      "status": "available",
+      "visible": true
+    },
+    {
+      "id": "seamless-image-edit",
+      "name": "Seamless Image Edit",
+      "repo": "SeamlessImageEdit",
+      "description": "Create seamless and tileable texture outputs from images or folders with seam repair, flattening, and 2x2 preview.",
+      "accent": "#9fd15f",
+      "icon": "SI",
       "category": "Work Stuff",
       "packagePreference": "portable",
       "status": "available",
