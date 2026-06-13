@@ -150,7 +150,7 @@ const fallbackState: ControlCenterState = {
     app('depth-map-ai-generator', 'DepthMap AI', 'DepthMapAIGenerator', 'Batch depth-map and WebP generator for local AI image workflows.', '#43b883', 'DM', 'Under Development', null, 'comingSoon'),
     app('image-to-ascii-3d', 'ASCII 3D', 'ImageToASCII3D', 'Image-to-ASCII converter with optional depth-map driven 3D parallax exports.', '#f0a848', 'A3', 'Under Development', null, 'comingSoon'),
     app('image-to-hunyuan-3d', 'Hunyuan 3D', 'ImageToHunyuan3D', 'Local image-to-3D workflow for Hunyuan mesh and texture generation.', '#8c65df', 'H3', 'Under Development'),
-    app('neko-angle-forge', 'AngleForge', 'NekoAngleForge', 'Local multi-angle image editor: re-render a photo from a new camera angle with Qwen-Image-Edit + the Multiple-Angles LoRA on your own GPU.', '#b14bff', 'AF', 'Under Development', null, 'comingSoon'),
+    app('multi-angle-edit', 'Multi-Angle Edit', 'MultiAngleEdit', 'Local multi-angle image editor: re-render a photo from a new camera angle with Qwen-Image-Edit + the Multiple-Angles LoRA on your own GPU.', '#b14bff', 'MA', 'Under Development', null, 'comingSoon'),
     app('markrush', 'MarkRush', 'MarkRush', 'Fast local Markdown viewer/editor built for huge files and folders.', '#e05d7b', 'MR', 'Work Stuff'),
     app('opensplit', 'OpenSplit', 'OpenSplit', 'Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.', '#4fb6d8', 'OS', 'Work Stuff'),
     app('seamless-image-edit', 'Seamless Image Edit', 'SeamlessImageEdit', 'Local image tiling and seamless texture prep for game art workflows.', '#d889ff', 'SI', 'Work Stuff'),

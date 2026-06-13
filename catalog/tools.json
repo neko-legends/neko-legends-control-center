@@ -1,5 +1,5 @@
 {
-  "catalogVersion": 9,
+  "catalogVersion": 10,
   "updatedAt": "2026-06-13",
   "tools": [
     {
@@ -135,12 +135,12 @@
       "visible": true
     },
     {
-      "id": "neko-angle-forge",
-      "name": "AngleForge",
-      "repo": "NekoAngleForge",
+      "id": "multi-angle-edit",
+      "name": "Multi-Angle Edit",
+      "repo": "MultiAngleEdit",
       "description": "Local multi-angle image editor: re-render a photo from a new camera angle with Qwen-Image-Edit + the Multiple-Angles LoRA on your own GPU.",
       "accent": "#b14bff",
-      "icon": "AF",
+      "icon": "MA",
       "category": "Under Development",
       "packagePreference": "portable",
       "status": "comingSoon",
