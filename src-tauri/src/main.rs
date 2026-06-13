@@ -559,6 +559,13 @@ fn default_agent_api_entries() -> Vec<AgentApiRegistryEntry> {
             "Library/search API.",
         ),
         default_agent_api_entry(
+            "multi-angle-edit",
+            "Multi-Angle Edit",
+            17339,
+            "127.0.0.1",
+            "Local Agent API.",
+        ),
+        default_agent_api_entry(
             "sprite-atlas-packer",
             "Sprite Atlas Packer",
             9877,
