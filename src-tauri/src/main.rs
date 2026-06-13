@@ -376,6 +376,7 @@ fn default_apps() -> Vec<LauncherApp> {
         app("depth-map-ai-generator", "DepthMap AI", "DepthMapAIGenerator", "Batch depth-map and WebP generator for local AI image workflows.", "#43b883", "DM", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
         app("image-to-ascii-3d", "ASCII 3D", "ImageToASCII3D", "Image-to-ASCII converter with optional depth-map driven 3D parallax exports.", "#f0a848", "A3", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
         app("image-to-hunyuan-3d", "Hunyuan 3D", "ImageToHunyuan3D", "Local image-to-3D workflow for Hunyuan mesh and texture generation.", "#8c65df", "H3", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::Available, None),
+        app("neko-angle-forge", "AngleForge", "NekoAngleForge", "Local multi-angle image editor: re-render a photo from a new camera angle with Qwen-Image-Edit + the Multiple-Angles LoRA on your own GPU.", "#b14bff", "AF", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
         app("markrush", "MarkRush", "MarkRush", "Fast local Markdown viewer/editor built for huge files and folders.", "#e05d7b", "MR", "Work Stuff", ToolStatus::Available, None),
         app("opensplit", "OpenSplit", "OpenSplit", "Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.", "#4fb6d8", "OS", "Work Stuff", ToolStatus::Available, None),
         app("seamless-image-edit", "Seamless Image Edit", "SeamlessImageEdit", "Local image tiling and seamless texture prep for game art workflows.", "#d889ff", "SI", "Work Stuff", ToolStatus::Available, None),

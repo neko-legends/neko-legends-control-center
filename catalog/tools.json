@@ -1,6 +1,6 @@
 {
-  "catalogVersion": 7,
-  "updatedAt": "2026-06-12",
+  "catalogVersion": 9,
+  "updatedAt": "2026-06-13",
   "tools": [
     {
       "id": "asset-vault",
@@ -63,6 +63,18 @@
       "visible": true
     },
     {
+      "id": "image-to-hunyuan-3d",
+      "name": "Hunyuan 3D",
+      "repo": "ImageToHunyuan3D",
+      "description": "Local image-to-3D workflow for Hunyuan mesh and texture generation.",
+      "accent": "#8c65df",
+      "icon": "H3",
+      "category": "Under Development",
+      "packagePreference": "portable",
+      "status": "comingSoon",
+      "visible": true
+    },
+    {
       "id": "markrush",
       "name": "MarkRush",
       "repo": "MarkRush",
@@ -117,6 +129,18 @@
       "description": "Turn loose sprite frames into deterministic TexturePacker-compatible PNG/WebP atlases.",
       "accent": "#39a7ff",
       "icon": "SA",
+      "category": "Under Development",
+      "packagePreference": "portable",
+      "status": "comingSoon",
+      "visible": true
+    },
+    {
+      "id": "neko-angle-forge",
+      "name": "AngleForge",
+      "repo": "NekoAngleForge",
+      "description": "Local multi-angle image editor: re-render a photo from a new camera angle with Qwen-Image-Edit + the Multiple-Angles LoRA on your own GPU.",
+      "accent": "#b14bff",
+      "icon": "AF",
       "category": "Under Development",
       "packagePreference": "portable",
       "status": "comingSoon",
