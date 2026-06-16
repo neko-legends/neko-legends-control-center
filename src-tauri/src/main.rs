@@ -312,11 +312,11 @@ fn default_true() -> bool {
 }
 
 fn default_catalog_version() -> u32 {
-    7
+    14
 }
 
 fn default_category() -> String {
-    "Work Stuff".to_string()
+    "-= Released Work Stuff =-".to_string()
 }
 
 fn is_under_development_category(category: &str) -> bool {
@@ -347,7 +347,7 @@ fn clear_coming_soon_release_state(launcher_app: &mut LauncherApp) {
 
 fn default_categories() -> Vec<String> {
     vec![
-        "Work Stuff".to_string(),
+        "-= Released Work Stuff =-".to_string(),
         "Fun Stuff".to_string(),
         UNDER_DEVELOPMENT_CATEGORY.to_string(),
     ]
@@ -370,17 +370,19 @@ fn normalize_categories(categories: Vec<String>) -> Vec<String> {
 
 fn default_apps() -> Vec<LauncherApp> {
     vec![
-        app("asset-vault", "Asset Vault", "AssetVault", "Local-first library for AI-generated game assets: import, triage, dedupe, search, export.", "#c9a04e", "AV", "Work Stuff", ToolStatus::ComingSoon, None),
-        app("batchlapse", "BatchLapse", "BatchLapse", "Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs.", "#5b8def", "BL", "Work Stuff", ToolStatus::Available, None),
-        app("cutscene-converter", "Cutscene Converter", "CutsceneConverter", "Godot-friendly cutscene video converter for MP4, WebM, and OGV.", "#f06f48", "CC", "Work Stuff", ToolStatus::Available, None),
+        app("asset-vault", "Asset Vault", "AssetVault", "Local-first library for AI-generated game assets: import, triage, dedupe, search, export.", "#c9a04e", "AV", "-= Released Work Stuff =-", ToolStatus::ComingSoon, None),
+        app("batchlapse", "BatchLapse", "BatchLapse", "Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs.", "#5b8def", "BL", "-= Released Work Stuff =-", ToolStatus::Available, None),
+        app("cutscene-converter", "Cutscene Converter", "CutsceneConverter", "Godot-friendly cutscene video converter for MP4, WebM, and OGV.", "#f06f48", "CC", "-= Released Work Stuff =-", ToolStatus::Available, None),
         app("depth-map-ai-generator", "DepthMap AI", "DepthMapAIGenerator", "Batch depth-map and WebP generator for local AI image workflows.", "#43b883", "DM", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
         app("image-to-ascii-3d", "ASCII 3D", "ImageToASCII3D", "Image-to-ASCII converter with optional depth-map driven 3D parallax exports.", "#f0a848", "A3", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
-        app("image-to-hunyuan-3d", "Hunyuan 3D", "ImageToHunyuan3D", "Local image-to-3D workflow for Hunyuan mesh and texture generation.", "#8c65df", "H3", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::Available, None),
+        app("image-to-3d", "Image to 3D", "ImageTo3D", "Local image-to-3D workflow for mesh, texture, and 3D asset generation.", "#8c65df", "I3", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::Available, None),
         app("multi-angle-edit", "Multi-Angle Edit", "MultiAngleEdit", "Local multi-angle image editor: re-render a photo from a new camera angle with Qwen-Image-Edit + the Multiple-Angles LoRA on your own GPU.", "#b14bff", "MA", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
-        app("markrush", "MarkRush", "MarkRush", "Fast local Markdown viewer/editor built for huge files and folders.", "#e05d7b", "MR", "Work Stuff", ToolStatus::Available, None),
-        app("opensplit", "OpenSplit", "OpenSplit", "Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.", "#4fb6d8", "OS", "Work Stuff", ToolStatus::Available, None),
-        app("seamless-image-edit", "Seamless Image Edit", "SeamlessImageEdit", "Local image tiling and seamless texture prep for game art workflows.", "#d889ff", "SI", "Work Stuff", ToolStatus::Available, None),
-        app("venice-media-local", "Venice Media", "VeniceMediaLocal", "Local Venice API media workspace for images, video, music, voice, and cleanup.", "#34c6a3", "VM", "Work Stuff", ToolStatus::Available, None),
+        app("image-to-splat", "ImageToSplat", "ImageToSplat", "Local TripoSplat workflow for turning a single image into Gaussian splat and point-cloud 3D exports.", "#55c7f7", "IS", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
+        app("splatscape", "SplatScape", "SplatScape", "Portable FPS-style explorer for 3D Gaussian splat scenes with WASD and mouse-look navigation.", "#7adfbb", "SS", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
+        app("markrush", "MarkRush", "MarkRush", "Fast local Markdown viewer/editor built for huge files and folders.", "#e05d7b", "MR", "-= Released Work Stuff =-", ToolStatus::Available, None),
+        app("opensplit", "OpenSplit", "OpenSplit", "Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.", "#4fb6d8", "OS", "-= Released Work Stuff =-", ToolStatus::Available, None),
+        app("seamless-image-edit", "Seamless Image Edit", "SeamlessImageEdit", "Local image tiling and seamless texture prep for game art workflows.", "#d889ff", "SI", "-= Released Work Stuff =-", ToolStatus::Available, None),
+        app("venice-media-local", "Venice Media", "VeniceMediaLocal", "Local Venice API media workspace for images, video, music, voice, and cleanup.", "#34c6a3", "VM", "-= Released Work Stuff =-", ToolStatus::Available, None),
         app("purpleplanet", "PurplePlanet", "PurplePlanet", "Luminous Three.js planet motion art for live wallpapers and screensavers.", "#8c65df", "PP", "Fun Stuff", ToolStatus::Available, Some("https://nekolegends.com/res/projects/purplePlanet/")),
         app("stargaze", "StarGaze", "StarGaze", "Glittering Three.js starfield wallpaper and screensaver with tunable motion.", "#6b7cff", "SG", "Fun Stuff", ToolStatus::Available, Some("https://nekolegends.com/res/projects/starGaze/")),
     ]
@@ -517,8 +519,8 @@ fn default_agent_api_entries() -> Vec<AgentApiRegistryEntry> {
             "Remote-control API with token flow.",
         ),
         default_agent_api_entry(
-            "image-to-hunyuan-3d",
-            "ImageToHunyuan3D",
+            "image-to-3d",
+            "ImageTo3D",
             17333,
             "127.0.0.1",
             "Local Agent API.",
@@ -562,6 +564,13 @@ fn default_agent_api_entries() -> Vec<AgentApiRegistryEntry> {
             "multi-angle-edit",
             "Multi-Angle Edit",
             17339,
+            "127.0.0.1",
+            "Local Agent API.",
+        ),
+        default_agent_api_entry(
+            "image-to-splat",
+            "ImageToSplat",
+            17340,
             "127.0.0.1",
             "Local Agent API.",
         ),

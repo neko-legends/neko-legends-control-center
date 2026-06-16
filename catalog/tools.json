@@ -1,6 +1,6 @@
 {
-  "catalogVersion": 10,
-  "updatedAt": "2026-06-13",
+  "catalogVersion": 14,
+  "updatedAt": "2026-06-15",
   "tools": [
     {
       "id": "asset-vault",
@@ -9,7 +9,7 @@
       "description": "Local-first library for AI-generated game assets: import, triage, dedupe, search, export.",
       "accent": "#c9a04e",
       "icon": "AV",
-      "category": "Work Stuff",
+      "category": "-= Released Work Stuff =-",
       "packagePreference": "portable",
       "status": "comingSoon",
       "visible": true
@@ -21,7 +21,7 @@
       "description": "Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs.",
       "accent": "#5b8def",
       "icon": "BL",
-      "category": "Work Stuff",
+      "category": "-= Released Work Stuff =-",
       "packagePreference": "portable",
       "status": "available",
       "visible": true
@@ -33,7 +33,7 @@
       "description": "Prepare AI-generated videos for game engines with batch conversion, trimming, scaling, and combining.",
       "accent": "#ff8a3d",
       "icon": "CC",
-      "category": "Work Stuff",
+      "category": "-= Released Work Stuff =-",
       "packagePreference": "portable",
       "status": "available",
       "visible": true
@@ -63,12 +63,12 @@
       "visible": true
     },
     {
-      "id": "image-to-hunyuan-3d",
-      "name": "Hunyuan 3D",
-      "repo": "ImageToHunyuan3D",
-      "description": "Local image-to-3D workflow for Hunyuan mesh and texture generation.",
+      "id": "image-to-3d",
+      "name": "Image to 3D",
+      "repo": "ImageTo3D",
+      "description": "Local image-to-3D workflow for mesh, texture, and 3D asset generation.",
       "accent": "#8c65df",
-      "icon": "H3",
+      "icon": "I3",
       "category": "Under Development",
       "packagePreference": "portable",
       "status": "comingSoon",
@@ -81,7 +81,7 @@
       "description": "Fast local Markdown viewer/editor built for huge files and folders.",
       "accent": "#e05d7b",
       "icon": "MR",
-      "category": "Work Stuff",
+      "category": "-= Released Work Stuff =-",
       "packagePreference": "portable",
       "status": "available",
       "visible": true
@@ -93,7 +93,7 @@
       "description": "Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.",
       "accent": "#4fb6d8",
       "icon": "OS",
-      "category": "Work Stuff",
+      "category": "-= Released Work Stuff =-",
       "packagePreference": "portable",
       "status": "available",
       "visible": true
@@ -117,7 +117,7 @@
       "description": "Create seamless and tileable texture outputs from images or folders with seam repair, flattening, and 2x2 preview.",
       "accent": "#9fd15f",
       "icon": "SI",
-      "category": "Work Stuff",
+      "category": "-= Released Work Stuff =-",
       "packagePreference": "portable",
       "status": "available",
       "visible": true
@@ -147,13 +147,37 @@
       "visible": true
     },
     {
+      "id": "image-to-splat",
+      "name": "ImageToSplat",
+      "repo": "ImageToSplat",
+      "description": "Local TripoSplat workflow for turning a single image into Gaussian splat and point-cloud 3D exports.",
+      "accent": "#55c7f7",
+      "icon": "IS",
+      "category": "Under Development",
+      "packagePreference": "portable",
+      "status": "comingSoon",
+      "visible": true
+    },
+    {
+      "id": "splatscape",
+      "name": "SplatScape",
+      "repo": "SplatScape",
+      "description": "Portable FPS-style explorer for 3D Gaussian splat scenes with WASD and mouse-look navigation.",
+      "accent": "#7adfbb",
+      "icon": "SS",
+      "category": "Under Development",
+      "packagePreference": "portable",
+      "status": "comingSoon",
+      "visible": true
+    },
+    {
       "id": "venice-media-local",
       "name": "Venice Media",
       "repo": "VeniceMediaLocal",
       "description": "Local Venice API media workspace for images, video, music, voice, and cleanup.",
       "accent": "#34c6a3",
       "icon": "VM",
-      "category": "Work Stuff",
+      "category": "-= Released Work Stuff =-",
       "packagePreference": "portable",
       "status": "available",
       "visible": true
