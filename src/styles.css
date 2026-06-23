@@ -681,6 +681,11 @@ button {
   color: var(--accent-2);
 }
 
+.agent-api-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
 .app-toggle {
   display: inline-grid;
   place-items: center;
@@ -1197,6 +1202,21 @@ button {
   border-radius: 8px;
   background: var(--surface-2);
   color: var(--text);
+}
+
+.version-picker-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.installed-version-badge {
+  color: var(--accent-2);
+  font-size: 11px;
+  font-weight: 850;
+  white-space: nowrap;
 }
 
 .segmented-control {

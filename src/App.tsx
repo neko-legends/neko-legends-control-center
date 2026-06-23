@@ -31,6 +31,8 @@ type LauncherApp = {
   category: string
   executablePath: string | null
   installedVersion: string | null
+  selectedVersion: string | null
+  installedVersions: InstalledVersion[]
   latestVersion: string | null
   releaseUrl: string | null
   releaseCheckedAt: string | null
@@ -41,6 +43,13 @@ type LauncherApp = {
   demoUrl: string | null
   status: ToolStatus
   visible: boolean
+}
+
+type InstalledVersion = {
+  version: string
+  executablePath: string | null
+  packagePath: string | null
+  installedAt: string
 }
 
 type ReleaseOption = {
@@ -67,6 +76,11 @@ type DownloadResult = {
   apps: LauncherApp[]
   filePath: string
   installFolder: string
+}
+
+type LaunchResult = {
+  apps: LauncherApp[]
+  relaunched: boolean
 }
 
 type ControlCenterUpdate = {
@@ -177,6 +191,8 @@ function app(id: string, name: string, repo: string, description: string, accent
     category: effectiveCategory,
     executablePath: null,
     installedVersion: null,
+    selectedVersion: null,
+    installedVersions: [],
     latestVersion: null,
     releaseUrl: null,
     releaseCheckedAt: null,
@@ -221,6 +237,19 @@ function conflictForPort(dashboard: AgentApiDashboard | null, port: number): Age
   return dashboard?.conflicts.find((conflict) => conflict.port === port) ?? null
 }
 
+function supportsHeadlessAgentLaunch(appId: string): boolean {
+  return new Set([
+    'asset-vault',
+    'batchlapse',
+    'cutscene-converter',
+    'depth-map-ai-generator',
+    'image-to-3d',
+    'image-to-splat',
+    'multi-angle-edit',
+    'sprite-atlas-packer',
+  ]).has(appId)
+}
+
 function versionNumberParts(version: string | null): number[] {
   if (!version) return []
   return Array.from(version.matchAll(/\d+/g), (match) => Number(match[0]))
@@ -247,6 +276,24 @@ function appArtifactPath(appInfo: LauncherApp): string | null {
 
 function isAppDownloaded(appInfo: LauncherApp): boolean {
   return Boolean(appArtifactPath(appInfo))
+}
+
+function installedVersionFor(appInfo: LauncherApp, version: string | null): InstalledVersion | null {
+  if (!version) return null
+  return (appInfo.installedVersions ?? []).find((installed) => installed.version === version) ?? null
+}
+
+function isVersionInstalled(appInfo: LauncherApp, version: string | null): boolean {
+  return Boolean(installedVersionFor(appInfo, version))
+}
+
+function selectedLaunchPath(appInfo: LauncherApp, version: string | null): string | null {
+  const installedVersion = installedVersionFor(appInfo, version)
+  if (installedVersion) {
+    return appInfo.demoUrl ? installedVersion.packagePath : installedVersion.executablePath
+  }
+  if (!version || version === appInfo.installedVersion) return appArtifactPath(appInfo)
+  return null
 }
 
 function hasKnownRelease(appInfo: LauncherApp): boolean {
@@ -454,6 +501,7 @@ export default function App() {
   const [draggedItem, setDraggedItem] = useState<DragItem | null>(null)
   const [dragGhost, setDragGhost] = useState<DragGhost | null>(null)
   const [selectedReleaseTags, setSelectedReleaseTags] = useState<Record<string, string>>({})
+  const [runningAppIds, setRunningAppIds] = useState<string[]>([])
   const [activeDownloads, setActiveDownloads] = useState<string[]>([])
   const [failedDownloads, setFailedDownloads] = useState<Record<string, boolean>>({})
   const [contextMenu, setContextMenu] = useState<AppContextMenu | null>(null)
@@ -499,7 +547,24 @@ export default function App() {
   categoriesRef.current = layoutCategories
 
   function selectedVersionFor(appInfo: LauncherApp): string | null {
-    return selectedReleaseTags[appInfo.id] ?? appInfo.latestVersion ?? appInfo.releaseOptions[0]?.tagName ?? null
+    return selectedReleaseTags[appInfo.id]
+      ?? appInfo.selectedVersion
+      ?? appInfo.latestVersion
+      ?? appInfo.installedVersion
+      ?? appInfo.releaseOptions[0]?.tagName
+      ?? null
+  }
+
+  function selectedVersionInstalled(appInfo: LauncherApp): boolean {
+    return isVersionInstalled(appInfo, selectedVersionFor(appInfo))
+  }
+
+  function canLaunchSelectedVersion(appInfo: LauncherApp): boolean {
+    return Boolean(selectedLaunchPath(appInfo, selectedVersionFor(appInfo)))
+  }
+
+  function isAppRunning(appInfo: LauncherApp): boolean {
+    return runningAppIds.includes(appInfo.id)
   }
 
   function displayStatus(appInfo: LauncherApp): AppDisplayStatus {
@@ -720,11 +785,32 @@ export default function App() {
   }
 
   async function launchApp(appInfo: LauncherApp) {
+    const version = selectedVersionFor(appInfo)
+    if (!selectedLaunchPath(appInfo, version)) {
+      setNotice(version ? `${appInfo.name} ${version} is not downloaded yet` : `${appInfo.name} is not downloaded yet`)
+      return
+    }
     setBusy(true)
-    setNotice(`Launching ${appInfo.name}...`)
+    setNotice(`${isAppRunning(appInfo) ? 'Re-launching' : 'Launching'} ${appInfo.name}...`)
     try {
-      await call<void>('launch_app', { request: { appId: appInfo.id } })
-      setNotice(`${appInfo.name} launched`)
+      const result = await call<LaunchResult>('launch_app', { request: { appId: appInfo.id, version } })
+      setState((current) => ({ ...current, apps: result.apps }))
+      setRunningAppIds((current) => current.includes(appInfo.id) ? current : [...current, appInfo.id])
+      setNotice(result.relaunched ? `${appInfo.name} relaunched` : `${appInfo.name} launched`)
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function launchHeadlessAgentApi(entry: AgentApiRegistryEntry) {
+    setBusy(true)
+    setNotice(`Starting ${entry.appName} headless API...`)
+    try {
+      await call<void>('launch_agent_api_headless', { request: { appId: entry.appId } })
+      setNotice(`${entry.appName} headless API starting on port ${entry.port}`)
+      window.setTimeout(() => void refreshAgentApiDashboard(), 800)
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error))
     } finally {
@@ -838,6 +924,11 @@ export default function App() {
         request: { appId: appInfo.id, version, packagePreference: appInfo.packagePreference },
       })
       setState((current) => ({ ...current, apps: result.apps }))
+      const downloadedApp = result.apps.find((candidate) => candidate.id === appInfo.id)
+      const downloadedVersion = downloadedApp?.selectedVersion ?? downloadedApp?.installedVersion ?? version
+      if (downloadedVersion) {
+        setSelectedReleaseTags((current) => ({ ...current, [appInfo.id]: downloadedVersion }))
+      }
       setNotice(`${appInfo.name} downloaded to ${fileName(result.installFolder) || fileName(result.filePath)}`)
       return true
     } catch (error) {
@@ -1637,6 +1728,7 @@ export default function App() {
                 {(agentApiDashboard?.apps ?? []).map((entry) => {
                   const conflict = conflictForPort(agentApiDashboard, entry.port)
                   const portValue = agentApiPortEdits[entry.appId] ?? String(entry.port)
+                  const canLaunchHeadless = supportsHeadlessAgentLaunch(entry.appId)
                   return (
                     <div className={classNames('agent-api-row', conflict && 'conflict')} key={entry.appId}>
                       <div className="agent-api-name">
@@ -1663,6 +1755,14 @@ export default function App() {
                         {conflict ? <small>{conflict.appNames.join(', ')}</small> : <small>Default {entry.defaultPort}</small>}
                       </div>
                       <div className="agent-api-actions">
+                        <button
+                          type="button"
+                          onClick={() => void launchHeadlessAgentApi(entry)}
+                          disabled={!canLaunchHeadless}
+                          title={canLaunchHeadless ? `Start ${entry.appName} headless API` : `${entry.appName} does not support headless launch yet`}
+                        >
+                          Headless
+                        </button>
                         <button type="button" onClick={() => void saveAgentApiPort(entry.appId, portValue)} title={`Save ${entry.appName} port`}>
                           Save
                         </button>
@@ -1812,7 +1912,7 @@ export default function App() {
                   }
                   appInfo.demoUrl
                     ? void viewDemo(appInfo)
-                    : appInfo.executablePath
+                    : canLaunchSelectedVersion(appInfo)
                       ? void launchApp(appInfo)
                       : void chooseExecutable(appInfo)
                 }}
@@ -1867,18 +1967,21 @@ export default function App() {
 
             <label className="version-picker">
               <span>Version</span>
-              <select
-                value={selectedVersionFor(selectedApp) ?? ''}
-                disabled={busy || selectedApp.releaseOptions.length === 0}
-                onChange={(event) => setSelectedReleaseTags((current) => ({ ...current, [selectedApp.id]: event.currentTarget.value }))}
-              >
-                {selectedApp.releaseOptions.length === 0 && <option value="">Scan releases</option>}
-                {selectedApp.releaseOptions.map((release) => (
-                  <option value={release.tagName} key={release.tagName}>
-                    {release.tagName}
-                  </option>
-                ))}
-              </select>
+              <div className="version-picker-row">
+                <select
+                  value={selectedVersionFor(selectedApp) ?? ''}
+                  disabled={busy || selectedApp.releaseOptions.length === 0}
+                  onChange={(event) => setSelectedReleaseTags((current) => ({ ...current, [selectedApp.id]: event.currentTarget.value }))}
+                >
+                  {selectedApp.releaseOptions.length === 0 && <option value="">Scan releases</option>}
+                  {selectedApp.releaseOptions.map((release) => (
+                    <option value={release.tagName} key={release.tagName}>
+                      {release.tagName}{isVersionInstalled(selectedApp, release.tagName) ? ' (Installed)' : ''}
+                    </option>
+                  ))}
+                </select>
+                {selectedVersionInstalled(selectedApp) && <strong className="installed-version-badge">(Installed)</strong>}
+              </div>
             </label>
 
             <div className="package-picker" aria-label="Download type">
@@ -1910,9 +2013,9 @@ export default function App() {
                   View Demo
                 </button>
               ) : (
-                <button className="primary-action" type="button" onClick={launchSelected} disabled={busy || !selectedApp.executablePath}>
+                <button className="primary-action" type="button" onClick={launchSelected} disabled={busy || !canLaunchSelectedVersion(selectedApp)}>
                   <Play size={17} />
-                  Launch
+                  {isAppRunning(selectedApp) ? 'Re-Launch' : 'Launch'}
                 </button>
               )}
               <button className="secondary-action" type="button" onClick={() => void openRepository(selectedApp)} title="Open GitHub README">
@@ -1973,7 +2076,7 @@ export default function App() {
               View Demo
             </button>
           )}
-          {!contextMenuApp.demoUrl && contextMenuApp.executablePath && (
+          {!contextMenuApp.demoUrl && canLaunchSelectedVersion(contextMenuApp) && (
             <button
               type="button"
               onClick={() => {
@@ -1983,7 +2086,7 @@ export default function App() {
               disabled={busy}
             >
               <Play size={15} />
-              Launch
+              {isAppRunning(contextMenuApp) ? 'Re-Launch' : 'Launch'}
             </button>
           )}
           <button
