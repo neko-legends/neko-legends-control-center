@@ -1,6 +1,6 @@
 {
-  "catalogVersion": 14,
-  "updatedAt": "2026-06-15",
+  "catalogVersion": 15,
+  "updatedAt": "2026-06-26",
   "tools": [
     {
       "id": "asset-vault",
@@ -165,6 +165,18 @@
       "description": "Portable FPS-style explorer for 3D Gaussian splat scenes with WASD and mouse-look navigation.",
       "accent": "#7adfbb",
       "icon": "SS",
+      "category": "Under Development",
+      "packagePreference": "portable",
+      "status": "comingSoon",
+      "visible": true
+    },
+    {
+      "id": "painterly-clouds-3d",
+      "name": "Painterly Clouds 3D",
+      "repo": "painterly-clouds-3d",
+      "description": "Painterly Three.js cloud scene for stylized skyboxes, wallpapers, and motion art.",
+      "accent": "#7fb7ff",
+      "icon": "PC",
       "category": "Under Development",
       "packagePreference": "portable",
       "status": "comingSoon",

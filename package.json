@@ -1,12 +1,13 @@
 {
   "name": "neko-legends-control-center",
   "private": true,
-  "version": "26.6.22",
+  "version": "26.6.23",
   "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 1430",
     "build": "tsc && vite build",
+    "build:release": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-portable.ps1",
     "build:portable": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-portable.ps1",
     "run:portable": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-portable.ps1",
     "preview": "vite preview --host 127.0.0.1 --port 1431",

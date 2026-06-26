@@ -1,6 +1,6 @@
 [package]
 name = "neko-legends-control-center"
-version = "26.6.22"
+version = "26.6.23"
 description = "A lightweight launcher and update hub for Neko Legends apps"
 authors = ["Neko Legends"]
 license = "MIT"

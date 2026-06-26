@@ -167,6 +167,7 @@ const fallbackState: ControlCenterState = {
     app('multi-angle-edit', 'Multi-Angle Edit', 'MultiAngleEdit', 'Local multi-angle image editor: re-render a photo from a new camera angle with Qwen-Image-Edit + the Multiple-Angles LoRA on your own GPU.', '#b14bff', 'MA', 'Under Development', null, 'comingSoon'),
     app('image-to-splat', 'ImageToSplat', 'ImageToSplat', 'Local TripoSplat workflow for turning a single image into Gaussian splat and point-cloud 3D exports.', '#55c7f7', 'IS', 'Under Development', null, 'comingSoon'),
     app('splatscape', 'SplatScape', 'SplatScape', 'Portable FPS-style explorer for 3D Gaussian splat scenes with WASD and mouse-look navigation.', '#7adfbb', 'SS', 'Under Development', null, 'comingSoon'),
+    app('painterly-clouds-3d', 'Painterly Clouds 3D', 'painterly-clouds-3d', 'Painterly Three.js cloud scene for stylized skyboxes, wallpapers, and motion art.', '#7fb7ff', 'PC', 'Under Development', null, 'comingSoon'),
     app('markrush', 'MarkRush', 'MarkRush', 'Fast local Markdown viewer/editor built for huge files and folders.', '#e05d7b', 'MR', '-= Released Work Stuff =-'),
     app('opensplit', 'OpenSplit', 'OpenSplit', 'Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.', '#4fb6d8', 'OS', '-= Released Work Stuff =-'),
     app('seamless-image-edit', 'Seamless Image Edit', 'SeamlessImageEdit', 'Local image tiling and seamless texture prep for game art workflows.', '#d889ff', 'SI', '-= Released Work Stuff =-'),

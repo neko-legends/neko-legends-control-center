@@ -345,7 +345,7 @@ fn default_true() -> bool {
 }
 
 fn default_catalog_version() -> u32 {
-    14
+    15
 }
 
 fn default_category() -> String {
@@ -412,6 +412,7 @@ fn default_apps() -> Vec<LauncherApp> {
         app("multi-angle-edit", "Multi-Angle Edit", "MultiAngleEdit", "Local multi-angle image editor: re-render a photo from a new camera angle with Qwen-Image-Edit + the Multiple-Angles LoRA on your own GPU.", "#b14bff", "MA", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
         app("image-to-splat", "ImageToSplat", "ImageToSplat", "Local TripoSplat workflow for turning a single image into Gaussian splat and point-cloud 3D exports.", "#55c7f7", "IS", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
         app("splatscape", "SplatScape", "SplatScape", "Portable FPS-style explorer for 3D Gaussian splat scenes with WASD and mouse-look navigation.", "#7adfbb", "SS", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
+        app("painterly-clouds-3d", "Painterly Clouds 3D", "painterly-clouds-3d", "Painterly Three.js cloud scene for stylized skyboxes, wallpapers, and motion art.", "#7fb7ff", "PC", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
         app("markrush", "MarkRush", "MarkRush", "Fast local Markdown viewer/editor built for huge files and folders.", "#e05d7b", "MR", "-= Released Work Stuff =-", ToolStatus::Available, None),
         app("opensplit", "OpenSplit", "OpenSplit", "Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.", "#4fb6d8", "OS", "-= Released Work Stuff =-", ToolStatus::Available, None),
         app("seamless-image-edit", "Seamless Image Edit", "SeamlessImageEdit", "Local image tiling and seamless texture prep for game art workflows.", "#d889ff", "SI", "-= Released Work Stuff =-", ToolStatus::Available, None),
@@ -1661,7 +1662,7 @@ fn best_control_center_asset(release: &GitHubRelease) -> Option<&GitHubReleaseAs
 
 fn github_client() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
-        .user_agent("NekoLegendsControlCenter/26.6.22")
+        .user_agent("NekoLegendsControlCenter/26.6.23")
         .build()
         .map_err(|err| err.to_string())
 }
