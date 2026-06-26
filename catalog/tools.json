@@ -129,9 +129,9 @@
       "description": "Turn loose sprite frames into deterministic TexturePacker-compatible PNG/WebP atlases.",
       "accent": "#39a7ff",
       "icon": "SA",
-      "category": "Under Development",
+      "category": "-= Released Work Stuff =-",
       "packagePreference": "portable",
-      "status": "comingSoon",
+      "status": "available",
       "visible": true
     },
     {
