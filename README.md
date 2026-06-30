@@ -31,7 +31,7 @@ There are three ways to launch an installed app:
 
 ## Current Tools
 
-### Released Work Stuff
+### Released Tools
 
 | App | Repository | Purpose |
 | --- | --- | --- |
