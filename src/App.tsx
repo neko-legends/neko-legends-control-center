@@ -165,7 +165,7 @@ const fallbackState: ControlCenterState = {
     app('depth-map-ai-generator', 'DepthMap AI', 'DepthMapAIGenerator', 'Batch depth-map and WebP generator for local AI image workflows.', '#43b883', 'DM', 'Under Development', null, 'comingSoon'),
     app('image-to-ascii-3d', 'ASCII 3D', 'ImageToASCII3D', 'Image-to-ASCII converter with optional depth-map driven 3D parallax exports.', '#f0a848', 'A3', 'Under Development', null, 'comingSoon'),
     app('image-to-3d', 'Image to 3D', 'ImageTo3D', 'Local image-to-3D workflow for mesh, texture, and 3D asset generation.', '#8c65df', 'I3', 'Under Development'),
-    app('multi-angle-edit', 'Multi-Angle Edit', 'MultiAngleEdit', 'Local multi-angle image editor: re-render a photo from a new camera angle with Qwen-Image-Edit + the Multiple-Angles LoRA on your own GPU.', '#b14bff', 'MA', releasedWorkStuffCategory),
+    app('multi-angle-edit', 'Multi-Angle Edit', 'multi-angle-edit', 'Local multi-angle image editor: re-render a photo from a new camera angle with Qwen-Image-Edit + the Multiple-Angles LoRA on your own GPU.', '#b14bff', 'MA', releasedWorkStuffCategory),
     app('image-to-splat', 'ImageToSplat', 'ImageToSplat', 'Local TripoSplat workflow for turning a single image into Gaussian splat and point-cloud 3D exports.', '#55c7f7', 'IS', 'Under Development', null, 'comingSoon'),
     app('splatscape', 'SplatScape', 'SplatScape', 'Portable FPS-style explorer for 3D Gaussian splat scenes with WASD and mouse-look navigation.', '#7adfbb', 'SS', 'Under Development', null, 'comingSoon'),
     app('painterly-clouds-3d', 'Painterly Clouds 3D', 'painterly-clouds-3d', 'Painterly Three.js cloud scene for stylized skyboxes, wallpapers, and motion art.', '#7fb7ff', 'PC', 'Under Development', null, 'comingSoon'),

@@ -1,5 +1,5 @@
 {
-  "catalogVersion": 16,
+  "catalogVersion": 17,
   "updatedAt": "2026-06-29",
   "tools": [
     {
@@ -137,7 +137,7 @@
     {
       "id": "multi-angle-edit",
       "name": "Multi-Angle Edit",
-      "repo": "MultiAngleEdit",
+      "repo": "multi-angle-edit",
       "description": "Local multi-angle image editor: re-render a photo from a new camera angle with Qwen-Image-Edit + the Multiple-Angles LoRA on your own GPU.",
       "accent": "#b14bff",
       "icon": "MA",
