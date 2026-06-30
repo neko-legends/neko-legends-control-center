@@ -42,6 +42,9 @@ try {
   $env:PATH = "$(Split-Path -Parent $cargoExe);$env:PATH"
 
   try {
+    if (Test-Path -LiteralPath $setupBundleDir) {
+      Get-ChildItem -LiteralPath $setupBundleDir -Filter '*.exe' -File -ErrorAction SilentlyContinue | Remove-Item -Force
+    }
     npx tauri build --runner $cargoExe
   } finally {
     $env:PATH = $previousPath
