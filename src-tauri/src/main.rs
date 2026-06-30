@@ -26,6 +26,7 @@ const GITHUB_OWNER: &str = "neko-legends";
 const CONTROL_CENTER_REPO: &str = "NekoLegendsControlCenter";
 const TOOLS_CATALOG_URL: &str = "https://nekolegends.com/res/nekoLegendsControlCenter/tools.json";
 const UNDER_DEVELOPMENT_CATEGORY: &str = "Under Development";
+const RELEASED_WORK_STUFF_CATEGORY: &str = "Released Work Stuff";
 const VENICE_MEDIA_LOCAL_ID: &str = "venice-media-local";
 const VENICE_MEDIA_LOCAL_DISPLAY_NAME: &str = "Venice Media Local";
 const AGENT_API_REGISTRY_FILE: &str = "agent-api-registry.json";
@@ -349,7 +350,7 @@ fn default_catalog_version() -> u32 {
 }
 
 fn default_category() -> String {
-    "-= Released Work Stuff =-".to_string()
+    RELEASED_WORK_STUFF_CATEGORY.to_string()
 }
 
 fn is_under_development_category(category: &str) -> bool {
@@ -380,18 +381,33 @@ fn clear_coming_soon_release_state(launcher_app: &mut LauncherApp) {
 
 fn default_categories() -> Vec<String> {
     vec![
-        "-= Released Work Stuff =-".to_string(),
+        RELEASED_WORK_STUFF_CATEGORY.to_string(),
         "Fun Stuff".to_string(),
         UNDER_DEVELOPMENT_CATEGORY.to_string(),
     ]
 }
 
+fn clean_category_label(category: &str) -> String {
+    let mut value = category.trim();
+    while let Some(rest) = value.strip_prefix("-=") {
+        value = rest.trim();
+    }
+    while let Some(rest) = value.strip_suffix("=-") {
+        value = rest.trim();
+    }
+    if value.is_empty() {
+        default_category()
+    } else {
+        value.to_string()
+    }
+}
+
 fn normalize_categories(categories: Vec<String>) -> Vec<String> {
     let mut normalized = Vec::new();
     for category in categories {
-        let trimmed = category.trim();
-        if !trimmed.is_empty() && !normalized.iter().any(|existing| existing == trimmed) {
-            normalized.push(trimmed.to_string());
+        let label = clean_category_label(&category);
+        if !normalized.iter().any(|existing| existing == &label) {
+            normalized.push(label);
         }
     }
     if normalized.is_empty() {
@@ -403,21 +419,21 @@ fn normalize_categories(categories: Vec<String>) -> Vec<String> {
 
 fn default_apps() -> Vec<LauncherApp> {
     vec![
-        app("asset-vault", "Asset Vault", "AssetVault", "Local-first library for AI-generated game assets: import, triage, dedupe, search, export.", "#c9a04e", "AV", "-= Released Work Stuff =-", ToolStatus::ComingSoon, None),
-        app("batchlapse", "BatchLapse", "BatchLapse", "Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs.", "#5b8def", "BL", "-= Released Work Stuff =-", ToolStatus::Available, None),
-        app("cutscene-converter", "Cutscene Converter", "CutsceneConverter", "Godot-friendly cutscene video converter for MP4, WebM, and OGV.", "#f06f48", "CC", "-= Released Work Stuff =-", ToolStatus::Available, None),
+        app("asset-vault", "Asset Vault", "AssetVault", "Local-first library for AI-generated game assets: import, triage, dedupe, search, export.", "#c9a04e", "AV", RELEASED_WORK_STUFF_CATEGORY, ToolStatus::ComingSoon, None),
+        app("batchlapse", "BatchLapse", "BatchLapse", "Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs.", "#5b8def", "BL", RELEASED_WORK_STUFF_CATEGORY, ToolStatus::Available, None),
+        app("cutscene-converter", "Cutscene Converter", "CutsceneConverter", "Godot-friendly cutscene video converter for MP4, WebM, and OGV.", "#f06f48", "CC", RELEASED_WORK_STUFF_CATEGORY, ToolStatus::Available, None),
         app("depth-map-ai-generator", "DepthMap AI", "DepthMapAIGenerator", "Batch depth-map and WebP generator for local AI image workflows.", "#43b883", "DM", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
         app("image-to-ascii-3d", "ASCII 3D", "ImageToASCII3D", "Image-to-ASCII converter with optional depth-map driven 3D parallax exports.", "#f0a848", "A3", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
         app("image-to-3d", "Image to 3D", "ImageTo3D", "Local image-to-3D workflow for mesh, texture, and 3D asset generation.", "#8c65df", "I3", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::Available, None),
-        app("multi-angle-edit", "Multi-Angle Edit", "MultiAngleEdit", "Local multi-angle image editor: re-render a photo from a new camera angle with Qwen-Image-Edit + the Multiple-Angles LoRA on your own GPU.", "#b14bff", "MA", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
+        app("multi-angle-edit", "Multi-Angle Edit", "MultiAngleEdit", "Local multi-angle image editor: re-render a photo from a new camera angle with Qwen-Image-Edit + the Multiple-Angles LoRA on your own GPU.", "#b14bff", "MA", RELEASED_WORK_STUFF_CATEGORY, ToolStatus::Available, None),
         app("image-to-splat", "ImageToSplat", "ImageToSplat", "Local TripoSplat workflow for turning a single image into Gaussian splat and point-cloud 3D exports.", "#55c7f7", "IS", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
         app("splatscape", "SplatScape", "SplatScape", "Portable FPS-style explorer for 3D Gaussian splat scenes with WASD and mouse-look navigation.", "#7adfbb", "SS", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
         app("painterly-clouds-3d", "Painterly Clouds 3D", "painterly-clouds-3d", "Painterly Three.js cloud scene for stylized skyboxes, wallpapers, and motion art.", "#7fb7ff", "PC", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
-        app("markrush", "MarkRush", "MarkRush", "Fast local Markdown viewer/editor built for huge files and folders.", "#e05d7b", "MR", "-= Released Work Stuff =-", ToolStatus::Available, None),
-        app("opensplit", "OpenSplit", "OpenSplit", "Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.", "#4fb6d8", "OS", "-= Released Work Stuff =-", ToolStatus::Available, None),
-        app("seamless-image-edit", "Seamless Image Edit", "SeamlessImageEdit", "Local image tiling and seamless texture prep for game art workflows.", "#d889ff", "SI", "-= Released Work Stuff =-", ToolStatus::Available, None),
-        app("sprite-atlas-packer", "Sprite Atlas Packer", "sprite-atlas-packer", "Turn loose sprite frames into deterministic TexturePacker-compatible PNG/WebP atlases.", "#39a7ff", "SA", "-= Released Work Stuff =-", ToolStatus::Available, None),
-        app("venice-media-local", "Venice Media", "VeniceMediaLocal", "Local Venice API media workspace for images, video, music, voice, and cleanup.", "#34c6a3", "VM", "-= Released Work Stuff =-", ToolStatus::Available, None),
+        app("markrush", "MarkRush", "MarkRush", "Fast local Markdown viewer/editor built for huge files and folders.", "#e05d7b", "MR", RELEASED_WORK_STUFF_CATEGORY, ToolStatus::Available, None),
+        app("opensplit", "OpenSplit", "OpenSplit", "Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.", "#4fb6d8", "OS", RELEASED_WORK_STUFF_CATEGORY, ToolStatus::Available, None),
+        app("seamless-image-edit", "Seamless Image Edit", "SeamlessImageEdit", "Local image tiling and seamless texture prep for game art workflows.", "#d889ff", "SI", RELEASED_WORK_STUFF_CATEGORY, ToolStatus::Available, None),
+        app("sprite-atlas-packer", "Sprite Atlas Packer", "sprite-atlas-packer", "Turn loose sprite frames into deterministic TexturePacker-compatible PNG/WebP atlases.", "#39a7ff", "SA", RELEASED_WORK_STUFF_CATEGORY, ToolStatus::Available, None),
+        app("venice-media-local", "Venice Media", "VeniceMediaLocal", "Local Venice API media workspace for images, video, music, voice, and cleanup.", "#34c6a3", "VM", RELEASED_WORK_STUFF_CATEGORY, ToolStatus::Available, None),
         app("purpleplanet", "PurplePlanet", "PurplePlanet", "Luminous Three.js planet motion art for live wallpapers and screensavers.", "#8c65df", "PP", "Fun Stuff", ToolStatus::Available, Some("https://nekolegends.com/res/projects/purplePlanet/")),
         app("stargaze", "StarGaze", "StarGaze", "Glittering Three.js starfield wallpaper and screensaver with tunable motion.", "#6b7cff", "SG", "Fun Stuff", ToolStatus::Available, Some("https://nekolegends.com/res/projects/starGaze/")),
     ]
@@ -826,12 +842,7 @@ fn clean_hex_color(value: &str, fallback: &str) -> String {
 }
 
 fn default_category_if_empty(value: &str) -> String {
-    let value = value.trim();
-    if value.is_empty() {
-        default_category()
-    } else {
-        value.to_string()
-    }
+    clean_category_label(value)
 }
 
 fn clean_catalog_tool(mut launcher_app: LauncherApp) -> Option<LauncherApp> {

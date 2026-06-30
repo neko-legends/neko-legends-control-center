@@ -540,6 +540,7 @@ button {
 }
 
 .agent-api-panel {
+  container-type: inline-size;
   display: grid;
   gap: 6px;
   min-width: 0;
@@ -582,7 +583,8 @@ button {
 }
 
 .agent-api-list {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 5px;
   max-height: 150px;
   min-width: 0;
@@ -591,10 +593,12 @@ button {
 }
 
 .agent-api-row {
+  flex: 0 0 auto;
   display: grid;
-  grid-template-columns: minmax(126px, 1.1fr) minmax(84px, 0.55fr) minmax(160px, 1.35fr) auto;
-  gap: 7px;
-  min-height: 38px;
+  grid-template-columns: minmax(150px, 1.05fr) minmax(112px, auto) minmax(190px, 1.25fr) auto;
+  column-gap: 10px;
+  row-gap: 5px;
+  min-height: 40px;
   padding: 5px 6px;
   border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
   border-radius: 8px;
@@ -631,10 +635,12 @@ button {
 
 .agent-api-port {
   gap: 5px;
+  justify-content: flex-end;
   color: var(--muted);
   font-size: 10px;
   font-weight: 850;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .agent-api-port input {
@@ -662,6 +668,7 @@ button {
 .agent-api-actions {
   gap: 5px;
   justify-content: end;
+  min-width: max-content;
 }
 
 .agent-api-actions button {
@@ -684,6 +691,21 @@ button {
 .agent-api-actions button:disabled {
   cursor: not-allowed;
   opacity: 0.42;
+}
+
+@container (max-width: 640px) {
+  .agent-api-row {
+    grid-template-columns: minmax(0, 1fr) minmax(112px, auto);
+  }
+
+  .agent-api-url {
+    grid-column: 1 / -1;
+  }
+
+  .agent-api-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
 }
 
 .app-toggle {

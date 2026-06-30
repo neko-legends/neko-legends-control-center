@@ -1,6 +1,6 @@
 {
-  "catalogVersion": 15,
-  "updatedAt": "2026-06-26",
+  "catalogVersion": 16,
+  "updatedAt": "2026-06-29",
   "tools": [
     {
       "id": "asset-vault",
@@ -9,7 +9,7 @@
       "description": "Local-first library for AI-generated game assets: import, triage, dedupe, search, export.",
       "accent": "#c9a04e",
       "icon": "AV",
-      "category": "-= Released Work Stuff =-",
+      "category": "Released Work Stuff",
       "packagePreference": "portable",
       "status": "comingSoon",
       "visible": true
@@ -21,7 +21,7 @@
       "description": "Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs.",
       "accent": "#5b8def",
       "icon": "BL",
-      "category": "-= Released Work Stuff =-",
+      "category": "Released Work Stuff",
       "packagePreference": "portable",
       "status": "available",
       "visible": true
@@ -33,7 +33,7 @@
       "description": "Prepare AI-generated videos for game engines with batch conversion, trimming, scaling, and combining.",
       "accent": "#ff8a3d",
       "icon": "CC",
-      "category": "-= Released Work Stuff =-",
+      "category": "Released Work Stuff",
       "packagePreference": "portable",
       "status": "available",
       "visible": true
@@ -81,7 +81,7 @@
       "description": "Fast local Markdown viewer/editor built for huge files and folders.",
       "accent": "#e05d7b",
       "icon": "MR",
-      "category": "-= Released Work Stuff =-",
+      "category": "Released Work Stuff",
       "packagePreference": "portable",
       "status": "available",
       "visible": true
@@ -93,7 +93,7 @@
       "description": "Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.",
       "accent": "#4fb6d8",
       "icon": "OS",
-      "category": "-= Released Work Stuff =-",
+      "category": "Released Work Stuff",
       "packagePreference": "portable",
       "status": "available",
       "visible": true
@@ -117,7 +117,7 @@
       "description": "Create seamless and tileable texture outputs from images or folders with seam repair, flattening, and 2x2 preview.",
       "accent": "#9fd15f",
       "icon": "SI",
-      "category": "-= Released Work Stuff =-",
+      "category": "Released Work Stuff",
       "packagePreference": "portable",
       "status": "available",
       "visible": true
@@ -129,7 +129,7 @@
       "description": "Turn loose sprite frames into deterministic TexturePacker-compatible PNG/WebP atlases.",
       "accent": "#39a7ff",
       "icon": "SA",
-      "category": "-= Released Work Stuff =-",
+      "category": "Released Work Stuff",
       "packagePreference": "portable",
       "status": "available",
       "visible": true
@@ -141,9 +141,9 @@
       "description": "Local multi-angle image editor: re-render a photo from a new camera angle with Qwen-Image-Edit + the Multiple-Angles LoRA on your own GPU.",
       "accent": "#b14bff",
       "icon": "MA",
-      "category": "Under Development",
+      "category": "Released Work Stuff",
       "packagePreference": "portable",
-      "status": "comingSoon",
+      "status": "available",
       "visible": true
     },
     {
@@ -189,7 +189,7 @@
       "description": "Local Venice API media workspace for images, video, music, voice, and cleanup.",
       "accent": "#34c6a3",
       "icon": "VM",
-      "category": "-= Released Work Stuff =-",
+      "category": "Released Work Stuff",
       "packagePreference": "portable",
       "status": "available",
       "visible": true
