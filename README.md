@@ -31,6 +31,8 @@ There are three ways to launch an installed app:
 
 ## Current Tools
 
+Catalog snapshot: `catalog/tools.json` version 18, updated 2026-06-30.
+
 ### Released Tools
 
 | App | Repository | Purpose |
@@ -44,14 +46,27 @@ There are three ways to launch an installed app:
 | Sprite Atlas Packer | [neko-legends/sprite-atlas-packer](https://github.com/neko-legends/sprite-atlas-packer) | Turn loose sprite frames into deterministic TexturePacker-compatible PNG/WebP atlases. |
 | Venice Media | [neko-legends/VeniceMediaLocal](https://github.com/neko-legends/VeniceMediaLocal) | Local Venice API media workspace for images, video, music, voice, and cleanup. |
 
-### Fun Stuff
+### Hosted Demos And Fun Stuff
+
+| App | Repository | Demo | Purpose |
+| --- | --- | --- | --- |
+| PurplePlanet | [neko-legends/PurplePlanet](https://github.com/neko-legends/PurplePlanet) | [Demo](https://nekolegends.com/res/projects/purplePlanet/) | Three.js planet motion art for live wallpapers and screensavers. |
+| StarGaze | [neko-legends/StarGaze](https://github.com/neko-legends/StarGaze) | [Demo](https://nekolegends.com/res/projects/starGaze/) | Three.js starfield wallpaper and screensaver with tunable motion. |
+
+### Under Development
+
+These entries are visible in the Control Center, but downloads stay disabled until a public GitHub release is found. A manual Scan, or the startup stale-release scan, can promote an app automatically once it ships.
 
 | App | Repository | Purpose |
 | --- | --- | --- |
-| PurplePlanet | [neko-legends/PurplePlanet](https://github.com/neko-legends/PurplePlanet) | Three.js planet motion art for live wallpapers and screensavers. |
-| StarGaze | [neko-legends/StarGaze](https://github.com/neko-legends/StarGaze) | Three.js starfield wallpaper and screensaver with tunable motion. |
-
-More tools are in progress. The README will grow as each one is ready to ship.
+| Asset Vault | [neko-legends/AssetVault](https://github.com/neko-legends/AssetVault) | Local-first library for AI-generated game assets: import, triage, dedupe, search, export. |
+| DepthMap AI | [neko-legends/DepthMapAIGenerator](https://github.com/neko-legends/DepthMapAIGenerator) | Batch depth-map and WebP generator for local AI image workflows. |
+| ASCII 3D | [neko-legends/ImageToASCII3D](https://github.com/neko-legends/ImageToASCII3D) | Image-to-ASCII converter with optional depth-map driven 3D parallax exports. |
+| Image to 3D | [neko-legends/ImageTo3D](https://github.com/neko-legends/ImageTo3D) | Local image-to-3D workflow for mesh, texture, and 3D asset generation. |
+| Palette Forge | [neko-legends/PaletteForge](https://github.com/neko-legends/PaletteForge) | Extract project palettes, remap assets, audit palette drift, and export engine-agnostic LUT/index textures. |
+| ImageToSplat | [neko-legends/ImageToSplat](https://github.com/neko-legends/ImageToSplat) | Local TripoSplat workflow for turning a single image into Gaussian splat and point-cloud 3D exports. |
+| SplatScape | [neko-legends/SplatScape](https://github.com/neko-legends/SplatScape) | Portable FPS-style explorer for 3D Gaussian splat scenes with WASD and mouse-look navigation. |
+| Painterly Clouds 3D | [neko-legends/painterly-clouds-3d](https://github.com/neko-legends/painterly-clouds-3d) | Painterly Three.js cloud scene for stylized skyboxes, wallpapers, and motion art. |
 
 ## Dynamic Tool Catalog
 
@@ -76,7 +91,7 @@ Catalog status values:
 - `available`: The tool can be shown as a normal tool. It still only becomes `Missing` after a GitHub release is known.
 - `comingSoon`: The tool can be shown in the launcher, but downloads are disabled and stale release metadata is ignored.
 
-Recommended catalog convention: put `comingSoon` tools in the `Under Development` category. If a user has already dragged a tool somewhere else, their saved layout wins until they choose Reset Layout.
+Recommended catalog convention: put `comingSoon` tools in the `Under Development` category. If a scan finds a public release for an under-development app, the Control Center promotes it to `available` and moves it into the released tools group automatically. Reset Layout is only for restoring the default visual layout.
 
 ## Status Labels
 
