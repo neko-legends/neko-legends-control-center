@@ -27,6 +27,7 @@ const CONTROL_CENTER_REPO: &str = "NekoLegendsControlCenter";
 const TOOLS_CATALOG_URL: &str = "https://nekolegends.com/res/nekoLegendsControlCenter/tools.json";
 const UNDER_DEVELOPMENT_CATEGORY: &str = "Under Development";
 const RELEASED_WORK_STUFF_CATEGORY: &str = "Released Work Stuff";
+const FUN_STUFF_CATEGORY: &str = "Fun Stuff";
 const VENICE_MEDIA_LOCAL_ID: &str = "venice-media-local";
 const VENICE_MEDIA_LOCAL_DISPLAY_NAME: &str = "Venice Media Local";
 const AGENT_API_REGISTRY_FILE: &str = "agent-api-registry.json";
@@ -382,23 +383,39 @@ fn clear_coming_soon_release_state(launcher_app: &mut LauncherApp) {
 fn default_categories() -> Vec<String> {
     vec![
         RELEASED_WORK_STUFF_CATEGORY.to_string(),
-        "Fun Stuff".to_string(),
+        FUN_STUFF_CATEGORY.to_string(),
         UNDER_DEVELOPMENT_CATEGORY.to_string(),
     ]
 }
 
 fn clean_category_label(category: &str) -> String {
-    let mut value = category.trim();
-    while let Some(rest) = value.strip_prefix("-=") {
-        value = rest.trim();
+    let mut value = category.trim().to_string();
+    loop {
+        let next_value = value
+            .trim()
+            .strip_prefix("-=")
+            .map(str::trim)
+            .unwrap_or(value.trim())
+            .strip_suffix("=-")
+            .map(str::trim)
+            .unwrap_or_else(|| value.trim())
+            .to_string();
+        if next_value == value {
+            break;
+        }
+        value = next_value;
     }
-    while let Some(rest) = value.strip_suffix("=-") {
-        value = rest.trim();
-    }
-    if value.is_empty() {
+    let value = value.split_whitespace().collect::<Vec<_>>().join(" ");
+    if value.eq_ignore_ascii_case(RELEASED_WORK_STUFF_CATEGORY) {
+        RELEASED_WORK_STUFF_CATEGORY.to_string()
+    } else if value.eq_ignore_ascii_case(FUN_STUFF_CATEGORY) {
+        FUN_STUFF_CATEGORY.to_string()
+    } else if value.eq_ignore_ascii_case(UNDER_DEVELOPMENT_CATEGORY) {
+        UNDER_DEVELOPMENT_CATEGORY.to_string()
+    } else if value.is_empty() {
         default_category()
     } else {
-        value.to_string()
+        value
     }
 }
 
@@ -413,7 +430,18 @@ fn normalize_categories(categories: Vec<String>) -> Vec<String> {
     if normalized.is_empty() {
         default_categories()
     } else {
-        normalized
+        let mut ordered = Vec::new();
+        for category in default_categories() {
+            if normalized.iter().any(|candidate| candidate == &category) {
+                ordered.push(category);
+            }
+        }
+        for category in normalized {
+            if !ordered.iter().any(|candidate| candidate == &category) {
+                ordered.push(category);
+            }
+        }
+        ordered
     }
 }
 
@@ -1009,7 +1037,7 @@ fn merge_catalog_apps(saved: Vec<LauncherApp>, defaults: Vec<LauncherApp>) -> Ve
             app.package_path = saved_app.package_path;
             app.visible = saved_app.visible;
             if !saved_app.category.trim().is_empty() {
-                app.category = saved_app.category;
+                app.category = clean_category_label(&saved_app.category);
             }
             normalize_development_status(&mut app);
             if app.status == ToolStatus::ComingSoon {

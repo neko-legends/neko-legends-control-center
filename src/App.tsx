@@ -152,7 +152,8 @@ const themes: Theme[] = [
 
 const underDevelopmentCategory = 'Under Development'
 const releasedWorkStuffCategory = 'Released Work Stuff'
-const defaultCategories = [releasedWorkStuffCategory, 'Fun Stuff', underDevelopmentCategory]
+const funStuffCategory = 'Fun Stuff'
+const defaultCategories = [releasedWorkStuffCategory, funStuffCategory, underDevelopmentCategory]
 const githubOwner = 'neko-legends'
 
 const fallbackState: ControlCenterState = {
@@ -332,8 +333,19 @@ function fileName(path: string | null): string {
 
 function categoryLabel(category: string): string {
   let value = category.trim()
-  while (value.startsWith('-=')) value = value.slice(2).trim()
-  while (value.endsWith('=-')) value = value.slice(0, -2).trim()
+  while (true) {
+    const nextValue = value
+      .replace(/^\s*-=\s*/, '')
+      .replace(/\s*=-\s*$/, '')
+      .trim()
+    if (nextValue === value) break
+    value = nextValue
+  }
+  value = value.replace(/\s+/g, ' ')
+  const key = value.toLocaleLowerCase()
+  if (key === releasedWorkStuffCategory.toLocaleLowerCase()) return releasedWorkStuffCategory
+  if (key === funStuffCategory.toLocaleLowerCase()) return funStuffCategory
+  if (key === underDevelopmentCategory.toLocaleLowerCase()) return underDevelopmentCategory
   return value || releasedWorkStuffCategory
 }
 
@@ -345,7 +357,11 @@ function normalizeCategories(categories: string[]): string[] {
       normalized.push(value)
     }
   }
-  return normalized.length > 0 ? normalized : defaultCategories
+  if (normalized.length === 0) return defaultCategories
+
+  const orderedDefaults = defaultCategories.filter((category) => normalized.includes(category))
+  const customCategories = normalized.filter((category) => !defaultCategories.includes(category))
+  return [...orderedDefaults, ...customCategories]
 }
 
 function orderedCategories(apps: LauncherApp[], categories: string[]): string[] {
@@ -1066,10 +1082,11 @@ export default function App() {
   }
 
   async function persistLayout(apps: LauncherApp[], message: string, categories = layoutCategories) {
+    const nextApps = apps.map((appInfo) => ({ ...appInfo, category: categoryLabel(appInfo.category) }))
     const nextCategories = normalizeCategories(categories)
-    setState((current) => ({ ...current, apps, settings: { ...current.settings, categories: nextCategories } }))
-    const nextVisibleApps = apps.filter((candidate) => candidate.visible)
-    setSelectedId((current) => nextVisibleApps.some((candidate) => candidate.id === current) ? current : nextVisibleApps[0]?.id ?? apps[0]?.id ?? '')
+    setState((current) => ({ ...current, apps: nextApps, settings: { ...current.settings, categories: nextCategories } }))
+    const nextVisibleApps = nextApps.filter((candidate) => candidate.visible)
+    setSelectedId((current) => nextVisibleApps.some((candidate) => candidate.id === current) ? current : nextVisibleApps[0]?.id ?? nextApps[0]?.id ?? '')
 
     if (!isTauriRuntime()) {
       setNotice(message)
@@ -1077,7 +1094,7 @@ export default function App() {
     }
 
     try {
-      const savedState = await call<ControlCenterState>('save_layout', { request: { apps, categories: nextCategories } })
+      const savedState = await call<ControlCenterState>('save_layout', { request: { apps: nextApps, categories: nextCategories } })
       setState(savedState)
       setNotice(message)
     } catch (error) {
