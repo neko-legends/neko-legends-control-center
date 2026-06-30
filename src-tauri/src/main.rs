@@ -12,7 +12,7 @@ use std::{
     thread,
     time::Duration,
 };
-use tauri::{AppHandle, Manager, PhysicalSize, Size, WebviewWindow, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, PhysicalSize, Size, WebviewWindow, WindowEvent};
 #[cfg(windows)]
 use winreg::{enums::*, RegKey};
 
@@ -194,6 +194,16 @@ struct LaunchRequest {
 struct LaunchResult {
     apps: Vec<LauncherApp>,
     relaunched: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ReleaseScanProgress {
+    current: usize,
+    total: usize,
+    app_id: String,
+    app_name: String,
+    status: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1832,14 +1842,14 @@ async fn fetch_releases(
 
 async fn fetch_release_batch(
     client: &reqwest::Client,
-    batch: Vec<(usize, String)>,
-) -> Vec<(usize, Result<Vec<GitHubRelease>, String>)> {
+    batch: Vec<(usize, usize, String)>,
+) -> Vec<(usize, usize, Result<Vec<GitHubRelease>, String>)> {
     let mut tasks = tokio::task::JoinSet::new();
-    for (index, repo) in batch {
+    for (position, index, repo) in batch {
         let client = client.clone();
         tasks.spawn(async move {
             let result = fetch_releases(&client, &repo).await;
-            (index, result)
+            (position, index, result)
         });
     }
 
@@ -1848,12 +1858,32 @@ async fn fetch_release_batch(
         match joined {
             Ok(result) => results.push(result),
             Err(error) => results.push((
+                0,
                 usize::MAX,
                 Err(format!("Release scan task failed: {error}")),
             )),
         }
     }
     results
+}
+
+fn emit_release_scan_progress(
+    app: &AppHandle,
+    current: usize,
+    total: usize,
+    launcher_app: &LauncherApp,
+    status: &str,
+) {
+    let _ = app.emit(
+        "release-scan-progress",
+        ReleaseScanProgress {
+            current,
+            total,
+            app_id: launcher_app.id.clone(),
+            app_name: launcher_app.name.clone(),
+            status: status.to_string(),
+        },
+    );
 }
 
 fn executable_score(path: &Path, app_id: &str, repo: &str) -> i32 {
@@ -2537,6 +2567,23 @@ fn launch_app(app: AppHandle, request: LaunchRequest) -> Result<LaunchResult, St
     Ok(LaunchResult { apps, relaunched })
 }
 
+#[tauri::command]
+fn select_app_version(app: AppHandle, request: LaunchRequest) -> Result<Vec<LauncherApp>, String> {
+    let version = request
+        .version
+        .as_deref()
+        .filter(|version| !version.trim().is_empty())
+        .ok_or_else(|| "Choose an installed version first.".to_string())?;
+    let mut apps = read_apps(&app);
+    let index = apps
+        .iter()
+        .position(|candidate| candidate.id == request.app_id)
+        .ok_or_else(|| "App was not found".to_string())?;
+    select_installed_version(&mut apps[index], version)?;
+    save_apps(&app, &apps)?;
+    Ok(apps)
+}
+
 fn headless_agent_args(app_id: &str, port: u16) -> Result<Vec<String>, String> {
     match app_id {
         "sprite-atlas-packer" => Ok(vec![
@@ -3150,17 +3197,23 @@ async fn scan_releases(app: AppHandle) -> Result<Vec<LauncherApp>, String> {
     let mut release_jobs = Vec::new();
 
     for (index, launcher_app) in apps.iter().enumerate() {
-        release_jobs.push((index, launcher_app.repo.clone()));
+        release_jobs.push((index + 1, index, launcher_app.repo.clone()));
     }
 
+    let total = release_jobs.len();
     for (batch_index, batch) in release_jobs.chunks(RELEASE_SCAN_BATCH_SIZE).enumerate() {
         if batch_index > 0 {
             let spread = (batch_index as u64 % 3) * RELEASE_SCAN_BATCH_SPREAD_MS;
             tokio::time::sleep(Duration::from_millis(RELEASE_SCAN_BATCH_DELAY_MS + spread)).await;
         }
 
+        for (position, index, _) in batch {
+            if let Some(launcher_app) = apps.get(*index) {
+                emit_release_scan_progress(&app, *position, total, launcher_app, "checking");
+            }
+        }
         let results = fetch_release_batch(&client, batch.to_vec()).await;
-        for (index, result) in results {
+        for (position, index, result) in results {
             let Some(launcher_app) = apps.get_mut(index) else {
                 continue;
             };
@@ -3180,6 +3233,7 @@ async fn scan_releases(app: AppHandle) -> Result<Vec<LauncherApp>, String> {
                     launcher_app.release_checked_at = Some(checked_at.clone());
                 }
             }
+            emit_release_scan_progress(&app, position, total, launcher_app, "checked");
         }
     }
 
@@ -3373,6 +3427,7 @@ fn main() {
             save_layout,
             reset_layout,
             launch_app,
+            select_app_version,
             launch_agent_api_headless,
             open_release_url,
             open_repository_url,

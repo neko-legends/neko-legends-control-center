@@ -1026,6 +1026,11 @@ button {
   text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 36%, transparent);
 }
 
+.app-status.scanning {
+  color: var(--accent);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
 .app-status.update,
 .app-status.downloading {
   color: var(--warn);
@@ -1110,9 +1115,26 @@ button {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 18%, transparent), 0 0 16px rgb(255 176 0 / 0.42);
 }
 
+.new-release-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  max-width: calc(100% - 12px);
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--accent-2) 78%, var(--accent));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 82%, var(--accent));
+  color: var(--accent-2);
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1.2;
+  text-transform: uppercase;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent-2) 34%, transparent);
+}
+
 .detail-panel {
   display: grid;
-  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto auto auto minmax(0, 1fr);
   gap: 12px;
   height: 100%;
   min-width: 0;
@@ -1164,6 +1186,25 @@ button {
 
 .detail-heading > div:last-child {
   min-width: 0;
+}
+
+.detail-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.new-release-inline {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--accent-2) 72%, var(--accent));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-2) 78%, var(--accent));
+  color: var(--accent-2);
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
 .detail-meta {
@@ -1240,6 +1281,88 @@ button {
   color: var(--accent-2);
   font-size: 11px;
   font-weight: 850;
+  white-space: nowrap;
+}
+
+.rollback-panel {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgb(255 176 0 / 0.045), transparent),
+    var(--surface-2);
+}
+
+.rollback-panel > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.rollback-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.rollback-list button {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  min-height: 42px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 74%, transparent);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.rollback-list button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 54%, var(--border));
+  color: var(--accent);
+}
+
+.rollback-list button:disabled {
+  cursor: not-allowed;
+  opacity: 0.78;
+}
+
+.rollback-list button.active {
+  border-color: color-mix(in srgb, var(--accent-2) 56%, var(--border));
+  color: var(--accent-2);
+}
+
+.rollback-list span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.rollback-list strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rollback-panel small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

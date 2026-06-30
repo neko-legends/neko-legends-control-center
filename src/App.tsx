@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import { open } from '@tauri-apps/plugin-dialog'
 import {
   AppWindow,
@@ -133,6 +134,14 @@ type AgentApiDashboard = {
   apps: AgentApiRegistryEntry[]
   conflicts: AgentApiPortConflict[]
   nextAvailablePort: number
+}
+
+type ReleaseScanProgress = {
+  current: number
+  total: number
+  appId: string
+  appName: string
+  status: 'checking' | 'checked'
 }
 
 type Theme = {
@@ -325,15 +334,29 @@ function hasNoPublicRelease(appInfo: LauncherApp): boolean {
   return appInfo.releaseNotes === 'No public releases found yet.'
 }
 
+function newlyReleasedIds(beforeApps: LauncherApp[], afterApps: LauncherApp[]): string[] {
+  const beforeById = new Map(beforeApps.map((appInfo) => [appInfo.id, appInfo]))
+  return afterApps
+    .filter((appInfo) => {
+      const before = beforeById.get(appInfo.id)
+      return before && isComingSoon(before) && !isComingSoon(appInfo) && hasKnownRelease(appInfo)
+    })
+    .map((appInfo) => appInfo.id)
+}
+
 function installStatus(appInfo: LauncherApp): 'installed' | 'missing' {
   return isAppDownloaded(appInfo) ? 'installed' : 'missing'
 }
 
-type AppDisplayStatus = 'checking' | 'coming-soon' | 'missing' | 'installed' | 'update' | 'downloading' | 'failed'
+type AppDisplayStatus = 'checking' | 'scanning' | 'coming-soon' | 'missing' | 'installed' | 'update' | 'downloading' | 'failed'
 
 function fileName(path: string | null): string {
   if (!path) return ''
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path
+}
+
+function previousInstalledVersion(appInfo: LauncherApp): InstalledVersion | null {
+  return appInfo.installedVersions.find((installed) => installed.version !== appInfo.installedVersion) ?? null
 }
 
 function categoryLabel(category: string): string {
@@ -538,6 +561,8 @@ export default function App() {
   const [agentControlInfo, setAgentControlInfo] = useState<AgentControlInfo | null>(null)
   const [agentApiDashboard, setAgentApiDashboard] = useState<AgentApiDashboard | null>(null)
   const [agentApiPortEdits, setAgentApiPortEdits] = useState<Record<string, string>>({})
+  const [scanProgress, setScanProgress] = useState<ReleaseScanProgress | null>(null)
+  const [newReleaseIds, setNewReleaseIds] = useState<string[]>([])
   const draggedItemRef = useRef<DragItem | null>(null)
   const pointerDragRef = useRef<PointerDrag | null>(null)
   const dragListenersRef = useRef<DragListeners | null>(null)
@@ -570,6 +595,7 @@ export default function App() {
   )
   const agentApiConflictCount = agentApiDashboard?.conflicts.length ?? 0
   const selectedAppUpdateAvailable = selectedApp ? isAppDownloaded(selectedApp) && versionStatus(selectedApp) === 'update' : false
+  const selectedPreviousVersion = selectedApp ? previousInstalledVersion(selectedApp) : null
 
   appsRef.current = state.apps
   categoriesRef.current = layoutCategories
@@ -581,6 +607,14 @@ export default function App() {
       ?? appInfo.installedVersion
       ?? appInfo.releaseOptions[0]?.tagName
       ?? null
+  }
+
+  function rememberNewReleases(beforeApps: LauncherApp[], afterApps: LauncherApp[]): string[] {
+    const ids = newlyReleasedIds(beforeApps, afterApps)
+    if (ids.length > 0) {
+      setNewReleaseIds((current) => Array.from(new Set([...current, ...ids])))
+    }
+    return ids
   }
 
   function selectedVersionInstalled(appInfo: LauncherApp): boolean {
@@ -596,6 +630,7 @@ export default function App() {
   }
 
   function displayStatus(appInfo: LauncherApp): AppDisplayStatus {
+    if (scanProgress?.appId === appInfo.id && scanProgress.status === 'checking') return 'scanning'
     if (activeDownloads.includes(appInfo.id)) return 'downloading'
     if (failedDownloads[appInfo.id]) return 'failed'
     if (!isAppDownloaded(appInfo) && isComingSoon(appInfo)) return 'coming-soon'
@@ -611,6 +646,7 @@ export default function App() {
     if (status === 'failed') return 'Failed'
     if (status === 'update') return 'Update Ready'
     if (status === 'installed') return 'Installed'
+    if (status === 'scanning') return 'Scanning'
     if (status === 'checking') return 'Checking'
     if (status === 'coming-soon') return 'Coming Soon'
     return 'Missing'
@@ -620,6 +656,33 @@ export default function App() {
     void loadState()
     void checkControlCenterUpdate(false)
     void refreshAgentApiDashboard()
+  }, [])
+
+  useEffect(() => {
+    if (!isTauriRuntime()) return
+
+    let cancelled = false
+    let unlisten: (() => void) | null = null
+    void listen<ReleaseScanProgress>('release-scan-progress', (event) => {
+      if (cancelled) return
+      setScanProgress(event.payload)
+      if (event.payload.status === 'checking') {
+        setNotice(`Scanning ${event.payload.current}/${event.payload.total}: ${event.payload.appName}`)
+      }
+    }).then((cleanup) => {
+      if (cancelled) {
+        cleanup()
+      } else {
+        unlisten = cleanup
+      }
+    }).catch((error) => {
+      if (!cancelled) setNotice(error instanceof Error ? error.message : String(error))
+    })
+
+    return () => {
+      cancelled = true
+      unlisten?.()
+    }
   }, [])
 
   useEffect(() => {
@@ -702,7 +765,9 @@ export default function App() {
       if (nextState.apps.some((appInfo) => needsBootReleaseScan(appInfo, bootScanStartedAt))) {
         setNotice('Refreshing release data in staggered batches...')
         const apps = await call<LauncherApp[]>('scan_releases')
+        rememberNewReleases(nextState.apps, apps)
         setState((current) => ({ ...current, apps }))
+        setScanProgress(null)
       }
       setNotice('Ready')
     } catch (error) {
@@ -748,12 +813,15 @@ export default function App() {
     await saveAgentApiPort(appId, String(agentApiDashboard.nextAvailablePort))
   }
 
-  async function runReleaseScan(): Promise<ControlCenterUpdate | null> {
+  async function runReleaseScan(previousApps: LauncherApp[] = appsRef.current): Promise<{ update: ControlCenterUpdate | null; promotedCount: number }> {
+    setScanProgress(null)
     await call<LauncherApp[]>('refresh_tools_catalog').catch(() => null)
     const apps = await call<LauncherApp[]>('scan_releases')
     const update = await checkControlCenterUpdate(false)
+    const promotedIds = rememberNewReleases(previousApps, apps)
     setState((current) => ({ ...current, apps }))
-    return update
+    setScanProgress(null)
+    return { update, promotedCount: promotedIds.length }
   }
 
   async function scanForUpdates() {
@@ -764,11 +832,13 @@ export default function App() {
         setNotice('Browser preview. Release scans run in the desktop runtime.')
         return
       }
-      const update = await runReleaseScan()
-      setNotice(update?.updateAvailable ? 'Release scan complete - Control Center update available' : 'Release scan complete')
+      const { update, promotedCount } = await runReleaseScan()
+      const releaseSummary = promotedCount > 0 ? ` - ${promotedCount} newly released` : ''
+      setNotice(update?.updateAvailable ? `Release scan complete${releaseSummary} - Control Center update available` : `Release scan complete${releaseSummary}`)
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error))
     } finally {
+      setScanProgress(null)
       setBusy(false)
     }
   }
@@ -835,6 +905,21 @@ export default function App() {
       setState((current) => ({ ...current, apps: result.apps }))
       setRunningAppIds((current) => current.includes(appInfo.id) ? current : [...current, appInfo.id])
       setNotice(result.relaunched ? `${appInfo.name} relaunched` : `${appInfo.name} launched`)
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function selectInstalledVersion(appInfo: LauncherApp, version: string, label: string) {
+    setBusy(true)
+    setNotice(`${label} ${appInfo.name} to ${version}...`)
+    try {
+      const apps = await call<LauncherApp[]>('select_app_version', { request: { appId: appInfo.id, version } })
+      setState((current) => ({ ...current, apps }))
+      setSelectedReleaseTags((current) => ({ ...current, [appInfo.id]: version }))
+      setNotice(`${appInfo.name} is using ${version}`)
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error))
     } finally {
@@ -1631,8 +1716,9 @@ export default function App() {
       setState(nextState)
       setSelectedId(nextState.apps.find((candidate) => candidate.visible)?.id ?? nextState.apps[0]?.id ?? '')
       setNotice('Layout reset. Scanning releases...')
-      const update = await runReleaseScan()
-      setNotice(update?.updateAvailable ? 'Layout reset and scan complete - Control Center update available' : 'Layout reset and scan complete')
+      const { update, promotedCount } = await runReleaseScan(nextState.apps)
+      const releaseSummary = promotedCount > 0 ? ` - ${promotedCount} newly released` : ''
+      setNotice(update?.updateAvailable ? `Layout reset and scan complete${releaseSummary} - Control Center update available` : `Layout reset and scan complete${releaseSummary}`)
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error))
     } finally {
@@ -1895,6 +1981,7 @@ export default function App() {
             const selected = appInfo.id === selectedApp?.id
             const status = versionStatus(appInfo)
             const tileStatus = displayStatus(appInfo)
+            const isNewRelease = newReleaseIds.includes(appInfo.id)
             const isDraggedApp = draggedItem?.kind === 'app' && draggedItem.id === appInfo.id
 
             if (isDraggedApp) {
@@ -1958,6 +2045,7 @@ export default function App() {
                   </small>
                 </span>
                 {status === 'update' && <span className="update-dot" />}
+                {isNewRelease && <span className="new-release-badge">New</span>}
               </button>
             )
           })}
@@ -1970,7 +2058,10 @@ export default function App() {
                 {selectedApp.icon}
               </div>
               <div>
-                <h2>{selectedApp.name}</h2>
+                <h2>
+                  <span>{selectedApp.name}</span>
+                  {newReleaseIds.includes(selectedApp.id) && <span className="new-release-inline">New release</span>}
+                </h2>
                 <p>{selectedApp.description}</p>
               </div>
             </div>
@@ -2016,6 +2107,34 @@ export default function App() {
                 {selectedVersionInstalled(selectedApp) && <strong className="installed-version-badge">(Installed)</strong>}
               </div>
             </label>
+
+            {selectedApp.installedVersions.length > 0 && (
+              <div className="rollback-panel">
+                <div>
+                  <span>Installed builds</span>
+                  <strong>{selectedApp.installedVersions.length}</strong>
+                </div>
+                <div className="rollback-list">
+                  {selectedApp.installedVersions.map((installed, index) => {
+                    const current = installed.version === selectedApp.installedVersion
+                    return (
+                      <button
+                        type="button"
+                        key={installed.version}
+                        className={classNames(current && 'active')}
+                        onClick={() => void selectInstalledVersion(selectedApp, installed.version, index === 1 ? 'Rolling back' : 'Switching')}
+                        disabled={busy || current}
+                        title={current ? `${installed.version} is active` : `Use ${installed.version}`}
+                      >
+                        <span>{current ? 'Current' : index === 1 ? 'Rollback' : 'Use'}</span>
+                        <strong>{installed.version}</strong>
+                      </button>
+                    )
+                  })}
+                </div>
+                {selectedPreviousVersion && <small>Previous: {selectedPreviousVersion.version}</small>}
+              </div>
+            )}
 
             <div className="package-picker" aria-label="Download type">
               <span>Download type</span>
