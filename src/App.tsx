@@ -791,7 +791,7 @@ export default function App() {
         await call<void>('open_control_center_release', { update: controlCenterUpdate })
         setNotice(`${message} Opening the release page instead.`)
       } catch {
-        window.open(controlCenterUpdate.releaseUrl ?? 'https://github.com/neko-legends/NekoLegendsControlCenter/releases', '_blank', 'noopener')
+        window.open(controlCenterUpdate.releaseUrl ?? 'https://github.com/neko-legends/neko-legends-control-center/releases', '_blank', 'noopener')
         setNotice(message)
       }
       setControlCenterUpdating(false)

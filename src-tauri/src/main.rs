@@ -23,7 +23,7 @@ const FALLBACK_WINDOW_HEIGHT: u32 = 520;
 const PORTRAIT_WINDOW_WIDTH_RATIO: f32 = 0.9;
 const WINDOW_SIZE_SAVE_DEBOUNCE_MS: u64 = 300;
 const GITHUB_OWNER: &str = "neko-legends";
-const CONTROL_CENTER_REPO: &str = "NekoLegendsControlCenter";
+const CONTROL_CENTER_REPO: &str = "neko-legends-control-center";
 const TOOLS_CATALOG_URL: &str = "https://nekolegends.com/res/nekoLegendsControlCenter/tools.json";
 const UNDER_DEVELOPMENT_CATEGORY: &str = "Under Development";
 const RELEASED_TOOLS_CATEGORY: &str = "Released Tools";
@@ -1702,7 +1702,11 @@ fn best_control_center_asset(release: &GitHubRelease) -> Option<&GitHubReleaseAs
 
 fn github_client() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
-        .user_agent("NekoLegendsControlCenter/26.6.23")
+        .user_agent(format!(
+            "{}/{}",
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION")
+        ))
         .build()
         .map_err(|err| err.to_string())
 }
