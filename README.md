@@ -94,9 +94,10 @@ Run:
 npm run build:portable
 ```
 
-The build script creates one portable app:
+The build script creates one portable app and one installer:
 
 - `release\portable\neko-legends-control-center-portable.exe`
+- `release\installer\Neko Legends Control Center_<version>_x64-setup.exe`
 
 The `release\portable` folder is the distribution-friendly portable package. Keep its `apps` and `catalog` folders beside `neko-legends-control-center-portable.exe`; downloaded apps install there by default, and local catalog testing reads from `catalog\tools.json`.
 
@@ -106,7 +107,7 @@ To launch the current portable build:
 npm run run:portable
 ```
 
-The `src-tauri\target-*` folders are temporary build output. The `release\portable` folder is the only portable package to run or upload, and generated build output is intentionally ignored by Git.
+The `src-tauri\target-*` folders are temporary build output. The `release\portable` and `release\installer` folders are the packages to upload, and generated build output is intentionally ignored by Git.
 
 ## Development
 

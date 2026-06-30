@@ -7,7 +7,7 @@ $releaseDir = Join-Path $targetDir 'release'
 $setupTargetDir = Join-Path $rootDir 'src-tauri\target-setup'
 $setupBundleDir = Join-Path $setupTargetDir 'release\bundle\nsis'
 $portablePackageDir = Join-Path $rootDir 'release\portable'
-$setupPackageDir = Join-Path $rootDir 'release\setup'
+$installerPackageDir = Join-Path $rootDir 'release\installer'
 $cargoExe = (Get-Command cargo -ErrorAction SilentlyContinue).Source
 
 if (-not $cargoExe) {
@@ -74,14 +74,14 @@ try {
   New-Item -ItemType Directory -Force -Path $portablePackageDir | Out-Null
   New-Item -ItemType Directory -Force -Path (Join-Path $portablePackageDir 'apps') | Out-Null
   New-Item -ItemType Directory -Force -Path (Join-Path $portablePackageDir 'catalog') | Out-Null
-  New-Item -ItemType Directory -Force -Path $setupPackageDir | Out-Null
+  New-Item -ItemType Directory -Force -Path $installerPackageDir | Out-Null
   if (Test-Path -LiteralPath $portableExe) {
     Remove-Item -LiteralPath $portableExe -Force
   }
-  Get-ChildItem -LiteralPath $setupPackageDir -Filter '*.exe' -File -ErrorAction SilentlyContinue | Remove-Item -Force
+  Get-ChildItem -LiteralPath $installerPackageDir -Filter '*.exe' -File -ErrorAction SilentlyContinue | Remove-Item -Force
   Move-Item -LiteralPath $sourceExe -Destination $portableExe -Force
   foreach ($setupFile in $setupFiles) {
-    Copy-Item -LiteralPath $setupFile.FullName -Destination (Join-Path $setupPackageDir $setupFile.Name) -Force
+    Copy-Item -LiteralPath $setupFile.FullName -Destination (Join-Path $installerPackageDir $setupFile.Name) -Force
   }
   Copy-Item -LiteralPath (Join-Path $rootDir 'catalog\tools.json') -Destination (Join-Path $portablePackageDir 'catalog\tools.json') -Force
   Set-Content -LiteralPath (Join-Path $portablePackageDir 'README.txt') -Value @(
@@ -92,7 +92,7 @@ try {
   Write-Host "Portable app created: $portableExe"
   Write-Host "Portable package created: $portablePackageDir"
   foreach ($setupFile in $setupFiles) {
-    Write-Host "Setup installer created: $(Join-Path $setupPackageDir $setupFile.Name)"
+    Write-Host "Installer created: $(Join-Path $installerPackageDir $setupFile.Name)"
   }
 } finally {
   Pop-Location
