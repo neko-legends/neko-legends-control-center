@@ -26,6 +26,8 @@ Important files and folders:
 - `history\`: processed command files are moved here.
 - `state.json`: latest app/catalog state snapshot.
 
+Control Center also writes `capability-provider-catalog.v1.json` atomically beside the existing AppData control surfaces. It is a credential-free discovery snapshot, not a command inbox and not a replacement for the files above. In particular, `apiConfigured` only reflects explicit registry configuration; `apiReachable` requires a real health check and remains false when no check occurred.
+
 Use unique command filenames. For safer writes, create a `.tmp` file first, then rename it to `.json`.
 
 ## Commands

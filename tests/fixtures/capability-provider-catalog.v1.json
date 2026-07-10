@@ -1,0 +1,190 @@
+{
+  "schemaVersion": "1.0",
+  "catalogKind": "capability-provider-catalog.v1",
+  "generatedAt": "2026-07-09T00:00:00Z",
+  "provider": {
+    "id": "neko-legends-control-center",
+    "displayName": "Neko Legends Control Center",
+    "version": "26.6.30",
+    "kind": "desktop-control-center"
+  },
+  "sources": {
+    "effectiveCatalog": {
+      "sourceId": "control-center.effective-catalog",
+      "relativeName": "tools-catalog.json",
+      "version": "18",
+      "updatedAt": "2026-06-30"
+    },
+    "agentApiRegistry": {
+      "sourceId": "neko-legends.agent-api-registry",
+      "relativeName": "agent-api-registry.json",
+      "version": null,
+      "updatedAt": "2026-07-09T00:00:00Z"
+    },
+    "agentControl": {
+      "sourceId": "control-center.agent-control",
+      "relativeName": "agent-control",
+      "configured": false,
+      "reachable": false,
+      "available": false
+    }
+  },
+  "apps": [
+    {
+      "appId": "venice-media-local",
+      "appName": "Venice Media",
+      "cataloged": true,
+      "catalogStatus": "available",
+      "installed": true,
+      "installedVersion": "v26.7.9",
+      "selectedVersion": "v26.7.9",
+      "installedVersions": ["v26.7.9"],
+      "latestVersion": "v26.7.9",
+      "updateAvailable": false,
+      "agentApiRegistered": true,
+      "apiConfigured": true,
+      "apiReachable": false,
+      "providerReady": false,
+      "agentApi": {
+        "bindAddress": "0.0.0.0",
+        "port": 9876,
+        "url": "http://127.0.0.1:9876",
+        "openapiUrl": "http://127.0.0.1:9876/openapi.json",
+        "busy": false,
+        "activeJobId": null,
+        "lastSeen": "2026-07-09T00:00:00Z",
+        "reachabilityCheckedAt": null
+      }
+    }
+  ],
+  "fileCommands": [
+    { "action": "status", "capabilityId": "app.status.read", "requiresAppId": false },
+    { "action": "scan", "capabilityId": "app.release.scan", "requiresAppId": false },
+    { "action": "download", "capabilityId": "app.install", "requiresAppId": true },
+    { "action": "update", "capabilityId": "app.update", "requiresAppId": true },
+    { "action": "launch", "capabilityId": "app.launch", "requiresAppId": true },
+    { "action": "openFolder", "capabilityId": "app.folder.open", "requiresAppId": true }
+  ],
+  "capabilities": [
+    {
+      "id": "app.catalog.list",
+      "revision": "1",
+      "title": "Read app catalog",
+      "description": "Read the effective Control Center app catalog and discovery snapshot.",
+      "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+      "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+      "invocation": { "transports": [{ "type": "tauri-command", "command": "get_capability_provider_catalog" }] },
+      "sideEffects": ["read-local", "write-local"],
+      "riskClass": "reversible-local-write",
+      "approvalClass": "none",
+      "progress": { "mode": "none" },
+      "cancellation": { "supported": false },
+      "artifacts": []
+    },
+    {
+      "id": "app.status.read",
+      "revision": "1",
+      "title": "Read app status",
+      "description": "Read catalog, install, version, and update state.",
+      "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+      "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+      "invocation": { "transports": [{ "type": "tauri-command", "command": "get_state" }, { "type": "file-command", "action": "status" }] },
+      "sideEffects": ["read-local", "write-local"],
+      "riskClass": "reversible-local-write",
+      "approvalClass": "none",
+      "progress": { "mode": "none" },
+      "cancellation": { "supported": false },
+      "artifacts": []
+    },
+    {
+      "id": "app.release.scan",
+      "revision": "1",
+      "title": "Scan app releases",
+      "description": "Query public GitHub releases and update saved release metadata.",
+      "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+      "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+      "invocation": { "transports": [{ "type": "tauri-command", "command": "scan_releases" }, { "type": "file-command", "action": "scan" }] },
+      "sideEffects": ["network", "write-local"],
+      "riskClass": "reversible-local-write",
+      "approvalClass": "none",
+      "progress": { "mode": "none" },
+      "cancellation": { "supported": false },
+      "artifacts": []
+    },
+    {
+      "id": "app.install",
+      "revision": "1",
+      "title": "Install app release",
+      "description": "Download and install a selected public app release.",
+      "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+      "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+      "invocation": { "transports": [{ "type": "tauri-command", "command": "download_release" }, { "type": "file-command", "action": "download" }] },
+      "sideEffects": ["network", "write-local", "install-software", "delete-recoverable"],
+      "riskClass": "reversible-local-write",
+      "approvalClass": "confirm",
+      "progress": { "mode": "none" },
+      "cancellation": { "supported": false },
+      "artifacts": []
+    },
+    {
+      "id": "app.update",
+      "revision": "1",
+      "title": "Update app release",
+      "description": "Download and install a newer public app release.",
+      "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+      "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+      "invocation": { "transports": [{ "type": "tauri-command", "command": "download_release" }, { "type": "file-command", "action": "update" }] },
+      "sideEffects": ["network", "write-local", "install-software", "delete-recoverable"],
+      "riskClass": "reversible-local-write",
+      "approvalClass": "confirm",
+      "progress": { "mode": "none" },
+      "cancellation": { "supported": false },
+      "artifacts": []
+    },
+    {
+      "id": "app.launch",
+      "revision": "1",
+      "title": "Launch app",
+      "description": "Launch the configured local app artifact.",
+      "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+      "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+      "invocation": { "transports": [{ "type": "tauri-command", "command": "launch_app" }, { "type": "file-command", "action": "launch" }] },
+      "sideEffects": ["launch-process", "terminate-process"],
+      "riskClass": "machine-control",
+      "approvalClass": "confirm",
+      "progress": { "mode": "none" },
+      "cancellation": { "supported": false },
+      "artifacts": []
+    },
+    {
+      "id": "app.folder.open",
+      "revision": "1",
+      "title": "Open app folder",
+      "description": "Create when needed and open an app's local install folder.",
+      "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+      "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+      "invocation": { "transports": [{ "type": "tauri-command", "command": "open_install_folder" }, { "type": "file-command", "action": "openFolder" }] },
+      "sideEffects": ["write-local", "launch-process", "machine-control"],
+      "riskClass": "machine-control",
+      "approvalClass": "confirm",
+      "progress": { "mode": "none" },
+      "cancellation": { "supported": false },
+      "artifacts": []
+    },
+    {
+      "id": "app.agent-api-launch",
+      "revision": "1",
+      "title": "Launch app Agent API",
+      "description": "Launch an installed app using its Control Center-owned headless Agent API arguments.",
+      "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+      "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+      "invocation": { "transports": [{ "type": "tauri-command", "command": "launch_agent_api_headless" }] },
+      "sideEffects": ["launch-process", "machine-control"],
+      "riskClass": "machine-control",
+      "approvalClass": "confirm",
+      "progress": { "mode": "none" },
+      "cancellation": { "supported": false },
+      "artifacts": []
+    }
+  ]
+}

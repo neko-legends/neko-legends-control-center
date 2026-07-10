@@ -14,6 +14,10 @@ use std::{
 };
 use tauri::{AppHandle, Emitter, Manager, PhysicalSize, Size, WebviewWindow, WindowEvent};
 #[cfg(windows)]
+use windows_sys::Win32::Storage::FileSystem::{
+    MoveFileExW, MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH,
+};
+#[cfg(windows)]
 use winreg::{enums::*, RegKey};
 
 const MIN_WINDOW_WIDTH: u32 = 520;
@@ -32,6 +36,8 @@ const FUN_STUFF_CATEGORY: &str = "Fun Stuff";
 const VENICE_MEDIA_LOCAL_ID: &str = "venice-media-local";
 const VENICE_MEDIA_LOCAL_DISPLAY_NAME: &str = "Venice Media Local";
 const AGENT_API_REGISTRY_FILE: &str = "agent-api-registry.json";
+const CAPABILITY_PROVIDER_CATALOG_FILE: &str = "capability-provider-catalog.v1.json";
+const CAPABILITY_PROVIDER_SCHEMA_VERSION: &str = "1.0";
 const MAX_INSTALLED_APP_VERSIONS: usize = 2;
 const RELEASE_SCAN_BATCH_SIZE: usize = 3;
 const RELEASE_SCAN_BATCH_DELAY_MS: u64 = 750;
@@ -39,6 +45,7 @@ const RELEASE_SCAN_BATCH_SPREAD_MS: u64 = 100;
 
 static RUNNING_APPS: OnceLock<Mutex<BTreeMap<String, Child>>> = OnceLock::new();
 static WINDOW_SIZE_SAVE_STATE: OnceLock<Mutex<WindowSizeSaveState>> = OnceLock::new();
+static CAPABILITY_CATALOG_WRITE_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
 #[derive(Default)]
 struct WindowSizeSaveState {
@@ -329,6 +336,96 @@ struct AgentApiDashboard {
     next_available_port: u16,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CapabilityProviderCatalog {
+    schema_version: String,
+    catalog_kind: String,
+    generated_at: String,
+    provider: CapabilityCatalogProvider,
+    sources: CapabilityCatalogSources,
+    apps: Vec<CapabilityCatalogApp>,
+    file_commands: Vec<CapabilityFileCommand>,
+    capabilities: Vec<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CapabilityCatalogProvider {
+    id: String,
+    display_name: String,
+    version: String,
+    kind: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CapabilityCatalogSources {
+    effective_catalog: CapabilityCatalogVersionedSource,
+    agent_api_registry: CapabilityCatalogVersionedSource,
+    agent_control: CapabilityCatalogAgentControlSource,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CapabilityCatalogVersionedSource {
+    source_id: String,
+    relative_name: String,
+    version: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CapabilityCatalogAgentControlSource {
+    source_id: String,
+    relative_name: String,
+    configured: bool,
+    reachable: bool,
+    available: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CapabilityCatalogApp {
+    app_id: String,
+    app_name: String,
+    cataloged: bool,
+    catalog_status: Option<ToolStatus>,
+    installed: bool,
+    installed_version: Option<String>,
+    selected_version: Option<String>,
+    installed_versions: Vec<String>,
+    latest_version: Option<String>,
+    update_available: bool,
+    agent_api_registered: bool,
+    api_configured: bool,
+    api_reachable: bool,
+    provider_ready: bool,
+    agent_api: Option<CapabilityCatalogAgentApi>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CapabilityCatalogAgentApi {
+    bind_address: Option<String>,
+    port: u16,
+    url: Option<String>,
+    openapi_url: Option<String>,
+    busy: bool,
+    active_job_id: Option<String>,
+    last_seen: Option<String>,
+    reachability_checked_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CapabilityFileCommand {
+    action: String,
+    capability_id: String,
+    requires_app_id: bool,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct SaveAgentApiPortRequest {
@@ -563,6 +660,10 @@ fn tools_catalog_path(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(app_data_dir(app)?.join("tools-catalog.json"))
 }
 
+fn capability_provider_catalog_path(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(app_data_dir(app)?.join(CAPABILITY_PROVIDER_CATALOG_FILE))
+}
+
 fn shared_neko_legends_dir() -> Result<PathBuf, String> {
     let base = if cfg!(target_os = "windows") {
         std::env::var_os("APPDATA")
@@ -609,6 +710,60 @@ where
     fs::write(path, raw).map_err(|err| err.to_string())
 }
 
+fn write_json_file_atomic<T>(path: &Path, value: &T) -> Result<(), String>
+where
+    T: Serialize,
+{
+    let _guard = CAPABILITY_CATALOG_WRITE_LOCK
+        .get_or_init(|| Mutex::new(()))
+        .lock()
+        .map_err(|_| "Capability provider catalog write lock is unavailable.".to_string())?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|err| err.to_string())?;
+    }
+    let raw = serde_json::to_vec_pretty(value).map_err(|err| err.to_string())?;
+    let temp_path = path.with_extension("json.tmp");
+    fs::write(&temp_path, raw).map_err(|err| err.to_string())?;
+    if let Err(error) = replace_file_atomic(&temp_path, path) {
+        let _ = fs::remove_file(&temp_path);
+        return Err(error.to_string());
+    }
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn replace_file_atomic(source: &Path, destination: &Path) -> io::Result<()> {
+    fs::rename(source, destination)
+}
+
+#[cfg(windows)]
+fn replace_file_atomic(source: &Path, destination: &Path) -> io::Result<()> {
+    use std::os::windows::ffi::OsStrExt;
+
+    let source = source
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    let destination = destination
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    let moved = unsafe {
+        MoveFileExW(
+            source.as_ptr(),
+            destination.as_ptr(),
+            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
+        )
+    };
+    if moved == 0 {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
+}
+
 fn agent_api_url(bind_address: &str, port: u16) -> String {
     let host = if bind_address == "0.0.0.0" {
         "127.0.0.1"
@@ -616,6 +771,25 @@ fn agent_api_url(bind_address: &str, port: u16) -> String {
         bind_address
     };
     format!("http://{host}:{port}")
+}
+
+fn safe_catalog_agent_api_transport(
+    bind_address: &str,
+    port: u16,
+) -> (Option<String>, Option<String>, Option<String>) {
+    let bind_address = bind_address.trim();
+    if !matches!(
+        bind_address,
+        "0.0.0.0" | "127.0.0.1" | "localhost" | "::1" | "[::1]"
+    ) {
+        return (None, None, None);
+    }
+    let url = agent_api_url(bind_address, port);
+    (
+        Some(bind_address.to_string()),
+        Some(url.clone()),
+        Some(format!("{url}/openapi.json")),
+    )
 }
 
 fn default_agent_api_entry(
@@ -849,6 +1023,353 @@ fn agent_api_dashboard_from(registry: AgentApiRegistry) -> Result<AgentApiDashbo
         conflicts,
         next_available_port,
     })
+}
+
+fn capability_file_commands() -> Vec<CapabilityFileCommand> {
+    vec![
+        CapabilityFileCommand {
+            action: "status".to_string(),
+            capability_id: "app.status.read".to_string(),
+            requires_app_id: false,
+        },
+        CapabilityFileCommand {
+            action: "scan".to_string(),
+            capability_id: "app.release.scan".to_string(),
+            requires_app_id: false,
+        },
+        CapabilityFileCommand {
+            action: "download".to_string(),
+            capability_id: "app.install".to_string(),
+            requires_app_id: true,
+        },
+        CapabilityFileCommand {
+            action: "update".to_string(),
+            capability_id: "app.update".to_string(),
+            requires_app_id: true,
+        },
+        CapabilityFileCommand {
+            action: "launch".to_string(),
+            capability_id: "app.launch".to_string(),
+            requires_app_id: true,
+        },
+        CapabilityFileCommand {
+            action: "openFolder".to_string(),
+            capability_id: "app.folder.open".to_string(),
+            requires_app_id: true,
+        },
+    ]
+}
+
+fn app_capability(
+    id: &str,
+    title: &str,
+    description: &str,
+    tauri_command: &str,
+    file_action: Option<&str>,
+    requires_app_id: bool,
+    side_effects: &[&str],
+    risk_class: &str,
+    approval_class: &str,
+) -> serde_json::Value {
+    let mut transports = vec![serde_json::json!({
+        "type": "tauri-command",
+        "command": tauri_command,
+    })];
+    if let Some(action) = file_action {
+        transports.push(serde_json::json!({
+            "type": "file-command",
+            "action": action,
+        }));
+    }
+    let input_properties = if requires_app_id {
+        serde_json::json!({
+            "appId": { "type": "string", "minLength": 1 },
+            "version": { "type": "string" },
+            "packagePreference": { "enum": ["portable", "installer"] }
+        })
+    } else {
+        serde_json::json!({})
+    };
+    let required = if requires_app_id {
+        serde_json::json!(["appId"])
+    } else {
+        serde_json::json!([])
+    };
+    serde_json::json!({
+        "id": id,
+        "revision": "1",
+        "title": title,
+        "description": description,
+        "inputSchema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": input_properties,
+            "required": required,
+            "additionalProperties": false
+        },
+        "outputSchema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object"
+        },
+        "invocation": { "transports": transports },
+        "sideEffects": side_effects,
+        "riskClass": risk_class,
+        "approvalClass": approval_class,
+        "progress": { "mode": "none" },
+        "cancellation": { "supported": false },
+        "artifacts": []
+    })
+}
+
+fn control_center_capabilities() -> Vec<serde_json::Value> {
+    vec![
+        app_capability(
+            "app.catalog.list",
+            "Read app catalog",
+            "Read the effective Control Center app catalog and discovery snapshot.",
+            "get_capability_provider_catalog",
+            None,
+            false,
+            &["read-local", "write-local"],
+            "reversible-local-write",
+            "none",
+        ),
+        app_capability(
+            "app.status.read",
+            "Read app status",
+            "Read catalog, install, version, and update state.",
+            "get_state",
+            Some("status"),
+            false,
+            &["read-local", "write-local"],
+            "reversible-local-write",
+            "none",
+        ),
+        app_capability(
+            "app.release.scan",
+            "Scan app releases",
+            "Query public GitHub releases and update saved release metadata.",
+            "scan_releases",
+            Some("scan"),
+            false,
+            &["network", "write-local"],
+            "reversible-local-write",
+            "none",
+        ),
+        app_capability(
+            "app.install",
+            "Install app release",
+            "Download and install a selected public app release.",
+            "download_release",
+            Some("download"),
+            true,
+            &[
+                "network",
+                "write-local",
+                "install-software",
+                "delete-recoverable",
+            ],
+            "reversible-local-write",
+            "confirm",
+        ),
+        app_capability(
+            "app.update",
+            "Update app release",
+            "Download and install a newer public app release.",
+            "download_release",
+            Some("update"),
+            true,
+            &[
+                "network",
+                "write-local",
+                "install-software",
+                "delete-recoverable",
+            ],
+            "reversible-local-write",
+            "confirm",
+        ),
+        app_capability(
+            "app.launch",
+            "Launch app",
+            "Launch the configured local app artifact.",
+            "launch_app",
+            Some("launch"),
+            true,
+            &["launch-process", "terminate-process"],
+            "machine-control",
+            "confirm",
+        ),
+        app_capability(
+            "app.folder.open",
+            "Open app folder",
+            "Create when needed and open an app's local install folder.",
+            "open_install_folder",
+            Some("openFolder"),
+            true,
+            &["write-local", "launch-process", "machine-control"],
+            "machine-control",
+            "confirm",
+        ),
+        app_capability(
+            "app.agent-api-launch",
+            "Launch app Agent API",
+            "Launch an installed app using its Control Center-owned headless Agent API arguments.",
+            "launch_agent_api_headless",
+            None,
+            true,
+            &["launch-process", "machine-control"],
+            "machine-control",
+            "confirm",
+        ),
+    ]
+}
+
+fn capability_catalog_apps(
+    catalog_apps: &[LauncherApp],
+    installed_apps: &[LauncherApp],
+    api_entries: &[AgentApiRegistryEntry],
+) -> Vec<CapabilityCatalogApp> {
+    let mut app_ids = catalog_apps
+        .iter()
+        .chain(installed_apps)
+        .map(|app| app.id.clone())
+        .chain(api_entries.iter().map(|entry| entry.app_id.clone()))
+        .collect::<Vec<_>>();
+    app_ids.sort();
+    app_ids.dedup();
+
+    app_ids
+        .into_iter()
+        .map(|app_id| {
+            let catalog_app = catalog_apps.iter().find(|app| app.id == app_id);
+            let installed_app = installed_apps.iter().find(|app| app.id == app_id);
+            let api_entry = api_entries.iter().find(|entry| entry.app_id == app_id);
+            let app_name = catalog_app
+                .map(|app| app.name.clone())
+                .or_else(|| installed_app.map(|app| app.name.clone()))
+                .or_else(|| api_entry.map(|entry| entry.app_name.clone()))
+                .unwrap_or_else(|| app_id.clone());
+            let installed = installed_app.is_some_and(app_download_artifact_exists);
+            let api_configured = api_entry.is_some_and(|entry| entry.enabled);
+            // Registry URLs and timestamps are configuration metadata, not health evidence.
+            let api_reachable = false;
+            let provider_ready = installed && api_configured && api_reachable;
+            let installed_versions = installed_app
+                .map(|app| {
+                    app.installed_versions
+                        .iter()
+                        .filter(|version| installed_version_artifact_exists(app, version))
+                        .map(|version| version.version.clone())
+                        .collect()
+                })
+                .unwrap_or_default();
+            let update_available = installed_app.is_some_and(|app| {
+                match (&app.latest_version, &app.installed_version) {
+                    (Some(latest), Some(installed)) => is_newer_version(latest, installed),
+                    _ => false,
+                }
+            });
+            let (bind_address, url, openapi_url) = api_entry
+                .map(|entry| safe_catalog_agent_api_transport(&entry.bind_address, entry.port))
+                .unwrap_or((None, None, None));
+            CapabilityCatalogApp {
+                app_id,
+                app_name,
+                cataloged: catalog_app.is_some(),
+                catalog_status: catalog_app.map(|app| app.status.clone()),
+                installed,
+                installed_version: installed
+                    .then(|| installed_app.and_then(|app| app.installed_version.clone()))
+                    .flatten(),
+                selected_version: installed
+                    .then(|| installed_app.and_then(|app| app.selected_version.clone()))
+                    .flatten(),
+                installed_versions,
+                latest_version: installed_app.and_then(|app| app.latest_version.clone()),
+                update_available,
+                agent_api_registered: api_entry.is_some(),
+                api_configured,
+                api_reachable,
+                provider_ready,
+                agent_api: api_entry.map(|entry| CapabilityCatalogAgentApi {
+                    bind_address,
+                    port: entry.port,
+                    url,
+                    openapi_url,
+                    busy: entry.busy,
+                    active_job_id: entry.active_job_id.clone(),
+                    last_seen: entry.last_seen.clone(),
+                    reachability_checked_at: None,
+                }),
+            }
+        })
+        .collect()
+}
+
+fn build_capability_provider_catalog(
+    build_version: &str,
+    effective_catalog: &ToolsCatalog,
+    apps: &[LauncherApp],
+    registry: &AgentApiRegistry,
+) -> CapabilityProviderCatalog {
+    let api_entries = merged_agent_api_entries(registry);
+    CapabilityProviderCatalog {
+        schema_version: CAPABILITY_PROVIDER_SCHEMA_VERSION.to_string(),
+        catalog_kind: "capability-provider-catalog.v1".to_string(),
+        generated_at: Utc::now().to_rfc3339(),
+        provider: CapabilityCatalogProvider {
+            id: "neko-legends-control-center".to_string(),
+            display_name: "Neko Legends Control Center".to_string(),
+            version: build_version.to_string(),
+            kind: "desktop-control-center".to_string(),
+        },
+        sources: CapabilityCatalogSources {
+            effective_catalog: CapabilityCatalogVersionedSource {
+                source_id: "control-center.effective-catalog".to_string(),
+                relative_name: "tools-catalog.json".to_string(),
+                version: Some(effective_catalog.catalog_version.to_string()),
+                updated_at: effective_catalog.updated_at.clone(),
+            },
+            agent_api_registry: CapabilityCatalogVersionedSource {
+                source_id: "neko-legends.agent-api-registry".to_string(),
+                relative_name: AGENT_API_REGISTRY_FILE.to_string(),
+                version: None,
+                updated_at: Some(registry.updated_at.clone()),
+            },
+            agent_control: CapabilityCatalogAgentControlSource {
+                source_id: "control-center.agent-control".to_string(),
+                relative_name: "agent-control".to_string(),
+                configured: false,
+                reachable: false,
+                available: false,
+            },
+        },
+        apps: capability_catalog_apps(&effective_catalog.tools, apps, &api_entries),
+        file_commands: capability_file_commands(),
+        capabilities: control_center_capabilities(),
+    }
+}
+
+fn write_capability_provider_catalog(
+    app: &AppHandle,
+    apps: &[LauncherApp],
+) -> Result<CapabilityProviderCatalog, String> {
+    let effective_catalog = read_effective_tools_catalog(app);
+    let registry = read_agent_api_registry()?;
+    let catalog = build_capability_provider_catalog(
+        &app.package_info().version.to_string(),
+        &effective_catalog,
+        apps,
+        &registry,
+    );
+    write_json_file_atomic(&capability_provider_catalog_path(app)?, &catalog)?;
+    Ok(catalog)
+}
+
+fn write_capability_provider_catalog_best_effort(app: &AppHandle, apps: &[LauncherApp]) {
+    if let Err(error) = write_capability_provider_catalog(app, apps) {
+        eprintln!("Failed to write capability provider catalog: {error}");
+    }
 }
 
 fn builtin_tools_catalog() -> ToolsCatalog {
@@ -1113,7 +1634,9 @@ fn merge_catalog_apps(saved: Vec<LauncherApp>, defaults: Vec<LauncherApp>) -> Ve
 
 fn save_apps(app: &AppHandle, apps: &[LauncherApp]) -> Result<(), String> {
     let path = apps_path(app)?;
-    write_json_file(&path, &apps)
+    write_json_file(&path, &apps)?;
+    write_capability_provider_catalog_best_effort(app, apps);
+    Ok(())
 }
 
 #[derive(Debug, Clone)]
@@ -1551,7 +2074,10 @@ fn stable_portable_exe_path(launcher_app: &LauncherApp, target_dir: &Path) -> Pa
     target_dir.join(format!("{}.exe", safe_file_segment(&launcher_app.repo)))
 }
 
-fn move_portable_exe_to_stable_name(source_path: &Path, stable_path: &Path) -> Result<PathBuf, String> {
+fn move_portable_exe_to_stable_name(
+    source_path: &Path,
+    stable_path: &Path,
+) -> Result<PathBuf, String> {
     if source_path == stable_path {
         return Ok(source_path.to_path_buf());
     }
@@ -1580,9 +2106,11 @@ fn prune_installed_versions(
         }
     }
 
-    launcher_app
-        .installed_versions
-        .retain(|installed| keep_versions.iter().any(|version| version == &installed.version));
+    launcher_app.installed_versions.retain(|installed| {
+        keep_versions
+            .iter()
+            .any(|version| version == &installed.version)
+    });
     launcher_app
         .installed_versions
         .truncate(MAX_INSTALLED_APP_VERSIONS);
@@ -2428,6 +2956,8 @@ fn save_settings(app: AppHandle, request: SaveSettingsRequest) -> Result<AppSett
         settings.categories = normalize_categories(categories);
     }
     write_json_file(&settings_path(&app)?, &settings)?;
+    let apps = read_apps(&app);
+    write_capability_provider_catalog_best_effort(&app, &apps);
     Ok(settings)
 }
 
@@ -2543,7 +3073,10 @@ fn launch_app(app: AppHandle, request: LaunchRequest) -> Result<LaunchResult, St
         .iter()
         .position(|candidate| candidate.id == request.app_id)
         .ok_or_else(|| "App was not found".to_string())?;
-    if let Some(version) = request.version.as_deref().filter(|version| !version.trim().is_empty())
+    if let Some(version) = request
+        .version
+        .as_deref()
+        .filter(|version| !version.trim().is_empty())
     {
         select_installed_version(&mut apps[index], version)?;
     }
@@ -3085,12 +3618,25 @@ fn get_agent_control_info(app: AppHandle) -> Result<AgentControlInfo, String> {
 }
 
 #[tauri::command]
-fn get_agent_api_dashboard() -> Result<AgentApiDashboard, String> {
-    agent_api_dashboard_from(read_agent_api_registry()?)
+fn get_capability_provider_catalog(app: AppHandle) -> Result<CapabilityProviderCatalog, String> {
+    let apps = read_apps(&app);
+    write_capability_provider_catalog(&app, &apps)
 }
 
 #[tauri::command]
-fn save_agent_api_port(request: SaveAgentApiPortRequest) -> Result<AgentApiDashboard, String> {
+fn get_agent_api_dashboard(app: AppHandle) -> Result<AgentApiDashboard, String> {
+    let registry = read_agent_api_registry()?;
+    let dashboard = agent_api_dashboard_from(registry)?;
+    let apps = read_apps(&app);
+    write_capability_provider_catalog_best_effort(&app, &apps);
+    Ok(dashboard)
+}
+
+#[tauri::command]
+fn save_agent_api_port(
+    app: AppHandle,
+    request: SaveAgentApiPortRequest,
+) -> Result<AgentApiDashboard, String> {
     if request.port == 0 {
         return Err("Agent API port must be between 1 and 65535.".to_string());
     }
@@ -3107,6 +3653,8 @@ fn save_agent_api_port(request: SaveAgentApiPortRequest) -> Result<AgentApiDashb
     entry.last_seen = Some(Utc::now().to_rfc3339());
 
     let registry = write_agent_api_registry(entries)?;
+    let apps = read_apps(&app);
+    write_capability_provider_catalog_best_effort(&app, &apps);
     agent_api_dashboard_from(registry)
 }
 
@@ -3404,8 +3952,10 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            let app_handle = app.handle().clone();
+            let apps = read_apps(&app_handle);
+            write_capability_provider_catalog_best_effort(&app_handle, &apps);
             if let Some(window) = app.get_webview_window("main") {
-                let app_handle = app.handle().clone();
                 if let Err(error) = apply_initial_window_size(&app_handle, &window) {
                     eprintln!("Failed to initialize window size: {error}");
                 }
@@ -3437,6 +3987,7 @@ fn main() {
             install_control_center_update,
             open_install_folder,
             get_agent_control_info,
+            get_capability_provider_catalog,
             get_agent_api_dashboard,
             save_agent_api_port,
             process_agent_control_commands,
@@ -3445,4 +3996,240 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running Neko Legends Control Center");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_dir(name: &str) -> PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "neko-control-center-{name}-{}-{}",
+            std::process::id(),
+            Utc::now().timestamp_nanos_opt().unwrap_or_default()
+        ));
+        fs::create_dir_all(&path).unwrap();
+        path
+    }
+
+    #[test]
+    fn capability_catalog_keeps_discovery_states_independent() {
+        let root = test_dir("states");
+        let executable = root.join("installed.exe");
+        fs::write(&executable, b"test").unwrap();
+        let mut catalog_app = app(
+            "test-app",
+            "Test App",
+            "TestApp",
+            "Test app.",
+            "#ffffff",
+            "TA",
+            RELEASED_TOOLS_CATEGORY,
+            ToolStatus::Available,
+            None,
+        );
+        catalog_app.latest_version = Some("v2.0.0".to_string());
+        let mut installed_app = catalog_app.clone();
+        installed_app.executable_path = Some(executable.to_string_lossy().to_string());
+        installed_app.installed_version = Some("v1.0.0".to_string());
+        installed_app.installed_versions = vec![InstalledVersion {
+            version: "v1.0.0".to_string(),
+            executable_path: installed_app.executable_path.clone(),
+            package_path: None,
+            installed_at: "2026-07-09T00:00:00Z".to_string(),
+        }];
+        let mut api = default_agent_api_entry("test-app", "Test App", 17333, "127.0.0.1", "Test");
+        api.enabled = true;
+        api.last_seen = Some("2026-07-09T00:00:00Z".to_string());
+
+        let apps = capability_catalog_apps(&[catalog_app], &[installed_app], &[api]);
+        let result = &apps[0];
+        assert!(result.cataloged);
+        assert!(result.installed);
+        assert!(result.api_configured);
+        assert!(!result.api_reachable);
+        assert!(!result.provider_ready);
+        assert!(result.update_available);
+        assert!(result
+            .agent_api
+            .as_ref()
+            .is_some_and(|api| api.reachability_checked_at.is_none()));
+
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn capability_catalog_uses_union_and_stable_order() {
+        let catalog_app = app(
+            "catalog-only",
+            "Catalog Only",
+            "CatalogOnly",
+            "Catalog app.",
+            "#ffffff",
+            "CO",
+            RELEASED_TOOLS_CATEGORY,
+            ToolStatus::Available,
+            None,
+        );
+        let api = default_agent_api_entry("api-only", "API Only", 17333, "127.0.0.1", "Test");
+        let apps = capability_catalog_apps(&[catalog_app], &[], &[api]);
+
+        assert_eq!(
+            apps.iter()
+                .map(|app| app.app_id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["api-only", "catalog-only"]
+        );
+        assert!(!apps[0].cataloged);
+        assert!(apps[0].agent_api_registered);
+        assert!(apps[1].cataloged);
+        assert!(!apps[1].agent_api_registered);
+    }
+
+    #[test]
+    fn advertised_actions_match_existing_file_commands_and_app_capabilities() {
+        let actions = capability_file_commands()
+            .into_iter()
+            .map(|command| command.action)
+            .collect::<Vec<_>>();
+        assert_eq!(
+            actions,
+            vec![
+                "status",
+                "scan",
+                "download",
+                "update",
+                "launch",
+                "openFolder"
+            ]
+        );
+        let ids = control_center_capabilities()
+            .into_iter()
+            .map(|capability| capability["id"].as_str().unwrap().to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            ids,
+            vec![
+                "app.catalog.list",
+                "app.status.read",
+                "app.release.scan",
+                "app.install",
+                "app.update",
+                "app.launch",
+                "app.folder.open",
+                "app.agent-api-launch",
+            ]
+        );
+    }
+
+    #[test]
+    fn serialized_catalog_is_credential_free_and_omits_local_artifact_paths() {
+        let root = test_dir("credentials");
+        let catalog = ToolsCatalog {
+            catalog_version: 18,
+            updated_at: Some("2026-07-09".to_string()),
+            tools: vec![app(
+                "test-app",
+                "Test App",
+                "TestApp",
+                "Test app.",
+                "#ffffff",
+                "TA",
+                RELEASED_TOOLS_CATEGORY,
+                ToolStatus::Available,
+                None,
+            )],
+        };
+        let mut installed = catalog.tools[0].clone();
+        installed.executable_path = Some("C:\\secret\\test.exe".to_string());
+        installed.package_path = Some("C:\\secret\\test.zip".to_string());
+        let registry = AgentApiRegistry {
+            updated_at: "2026-07-09T00:00:00Z".to_string(),
+            apps: Vec::new(),
+        };
+        let document =
+            build_capability_provider_catalog("1.0.0", &catalog, &[installed], &registry);
+        let raw = serde_json::to_string(&document).unwrap();
+        for forbidden in [
+            "bearerToken",
+            "apiKey",
+            "cookie",
+            "executablePath",
+            "packagePath",
+            "C:\\\\secret",
+            "agentApiRegistryPath",
+            "agentControlRoot",
+        ] {
+            assert!(
+                !raw.contains(forbidden),
+                "found forbidden field/value: {forbidden}"
+            );
+        }
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn capability_catalog_rebuilds_only_safe_local_registry_urls() {
+        let safe = safe_catalog_agent_api_transport("0.0.0.0", 9876);
+        assert_eq!(safe.0.as_deref(), Some("0.0.0.0"));
+        assert_eq!(safe.1.as_deref(), Some("http://127.0.0.1:9876"));
+        assert_eq!(
+            safe.2.as_deref(),
+            Some("http://127.0.0.1:9876/openapi.json")
+        );
+
+        let unsafe_transport = safe_catalog_agent_api_transport("user:secret@example.com", 9876);
+        assert_eq!(unsafe_transport, (None, None, None));
+    }
+
+    #[test]
+    fn serialized_fixture_matches_the_eva_core_catalog_contract() {
+        let raw = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../tests/fixtures/capability-provider-catalog.v1.json"
+        ));
+        let fixture: CapabilityProviderCatalog = serde_json::from_str(raw).unwrap();
+        let value = serde_json::to_value(&fixture).unwrap();
+
+        assert_eq!(value["schemaVersion"], CAPABILITY_PROVIDER_SCHEMA_VERSION);
+        assert!(value["apps"].is_array());
+        assert!(value["fileCommands"].is_array());
+        assert!(value["capabilities"].is_array());
+        assert!(value.get("applications").is_none());
+        assert!(value["sources"].get("agentApiRegistryPath").is_none());
+        assert!(value["sources"].get("agentControlRoot").is_none());
+        assert_eq!(value["apps"][0]["apiReachable"], false);
+        assert_eq!(value["apps"][0]["providerReady"], false);
+        assert_eq!(
+            fixture
+                .capabilities
+                .iter()
+                .map(|capability| capability["id"].as_str().unwrap())
+                .collect::<Vec<_>>(),
+            vec![
+                "app.catalog.list",
+                "app.status.read",
+                "app.release.scan",
+                "app.install",
+                "app.update",
+                "app.launch",
+                "app.folder.open",
+                "app.agent-api-launch",
+            ]
+        );
+    }
+
+    #[test]
+    fn atomic_json_write_replaces_destination_and_removes_temp_file() {
+        let root = test_dir("atomic");
+        let path = root.join(CAPABILITY_PROVIDER_CATALOG_FILE);
+        write_json_file_atomic(&path, &serde_json::json!({ "version": 1 })).unwrap();
+        write_json_file_atomic(&path, &serde_json::json!({ "version": 2 })).unwrap();
+
+        let value: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(value["version"], 2);
+        assert!(!path.with_extension("json.tmp").exists());
+        fs::remove_dir_all(root).unwrap();
+    }
 }

@@ -19,6 +19,7 @@ The tools are for humans building manually, humans working with AI agents, and A
 - Rearrange apps and categories with drag and drop.
 - Switch themes, compact labels, and visible apps.
 - Enable local AI Agent control for scripted status checks, downloads, updates, and launches.
+- Discover the effective app/provider state through a credential-free capability provider catalog.
 - Self-update the Control Center from the latest portable release when a newer version is available.
 
 ## Launching Apps
@@ -159,6 +160,20 @@ npm run run:portable
 The app is built with React, Vite, TypeScript, Tauri, and Rust.
 
 ## AI Agent Notes
+
+### Capability Provider Catalog
+
+Control Center atomically writes this additive discovery file under its existing AppData directory:
+
+```text
+%APPDATA%\com.nekolegends.controlcenter\capability-provider-catalog.v1.json
+```
+
+It combines the effective validated tool catalog, detected install/version state, merged Agent API registry metadata, existing file-command actions, and Control Center's implemented `app.*` capabilities. It does not replace or modify `catalog\tools.json`, the hosted catalog/cache, `agent-api-registry.json`, or Agent control inbox/outbox/history files.
+
+The canonical document uses `apps[]`, `fileCommands[]`, and `capabilities[]`. App states are intentionally independent: `cataloged`, `installed`, `apiConfigured`, `apiReachable`, and `providerReady`. Control Center does not probe Agent API endpoints in this phase, so a configured port, URL, OpenAPI URL, `lastSeen`, or busy flag never makes `apiReachable` or `providerReady` true. The catalog contains no tokens, API keys, cookies, executable/package paths, or absolute registry/Agent control paths; sources use opaque IDs and well-known relative names.
+
+For local debugging, the Tauri command `get_capability_provider_catalog` regenerates and returns the same document.
 
 Start here when making changes:
 
