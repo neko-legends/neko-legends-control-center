@@ -61,7 +61,7 @@ These entries are visible in the Control Center, but downloads stay disabled unt
 | App | Repository | Purpose |
 | --- | --- | --- |
 | Asset Vault | [neko-legends/AssetVault](https://github.com/neko-legends/AssetVault) | Local-first library for AI-generated game assets: import, triage, dedupe, search, export. |
-| DepthMap AI | [neko-legends/DepthMapAIGenerator](https://github.com/neko-legends/DepthMapAIGenerator) | Batch depth-map and WebP generator for local AI image workflows. |
+| DepthMap AI | [neko-legends/depth-map-generator](https://github.com/neko-legends/depth-map-generator) | Batch depth-map and WebP generator for local AI image workflows. |
 | ASCII 3D | [neko-legends/ImageToASCII3D](https://github.com/neko-legends/ImageToASCII3D) | Image-to-ASCII converter with optional depth-map driven 3D parallax exports. |
 | Image to 3D | [neko-legends/ImageTo3D](https://github.com/neko-legends/ImageTo3D) | Local image-to-3D workflow for mesh, texture, and 3D asset generation. |
 | Palette Forge | [neko-legends/PaletteForge](https://github.com/neko-legends/PaletteForge) | Extract project palettes, remap assets, audit palette drift, and export engine-agnostic LUT/index textures. |

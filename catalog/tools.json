@@ -41,7 +41,7 @@
     {
       "id": "depth-map-ai-generator",
       "name": "DepthMap AI",
-      "repo": "DepthMapAIGenerator",
+      "repo": "depth-map-generator",
       "description": "Batch depth-map and WebP generator for local AI image workflows.",
       "accent": "#43b883",
       "icon": "DM",

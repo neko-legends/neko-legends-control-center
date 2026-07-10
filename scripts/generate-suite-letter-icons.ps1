@@ -17,7 +17,7 @@ $suiteRoot = Split-Path -Parent $controlCenterRoot
 $apps = @(
   @{ Code = 'BL'; Name = 'BatchLapse'; Root = Join-Path $suiteRoot 'BatchLapse'; Tauri = 'src-tauri\icons' },
   @{ Code = 'CC'; Name = 'CutsceneConverter'; Root = Join-Path $suiteRoot 'CutsceneConverter'; Tauri = 'src-tauri\icons' },
-  @{ Code = 'DM'; Name = 'DepthMapAIGenerator'; Root = Join-Path $suiteRoot 'DepthMapAIGenerator'; Tauri = 'src-tauri\icons' },
+  @{ Code = 'DM'; Name = 'depth-map-generator'; Root = Join-Path $suiteRoot 'depth-map-generator'; Tauri = 'src-tauri\icons' },
   @{ Code = 'A3'; Name = 'ImageToASCII3D'; Root = Join-Path $suiteRoot 'ImageToASCII3D'; Tauri = 'src-tauri\icons'; WebIcon = 'apps\web\public\icon.png' },
   @{ Code = 'MR'; Name = 'MarkRush'; Root = Join-Path $suiteRoot 'MarkRush'; MarkRush = $true },
   @{ Code = 'OS'; Name = 'OpenSplit'; Root = Join-Path $suiteRoot 'OpenSplit'; Tauri = 'src-tauri\icons' },
