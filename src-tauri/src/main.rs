@@ -4038,7 +4038,7 @@ mod tests {
             package_path: None,
             installed_at: "2026-07-09T00:00:00Z".to_string(),
         }];
-        let mut api = default_agent_api_entry("test-app", "Test App", 17333, "127.0.0.1", "Test");
+        let mut api = default_agent_api_entry("test-app", "Test App", 54321, "127.0.0.1", "Test");
         api.enabled = true;
         api.last_seen = Some("2026-07-09T00:00:00Z".to_string());
 
@@ -4071,7 +4071,7 @@ mod tests {
             ToolStatus::Available,
             None,
         );
-        let api = default_agent_api_entry("api-only", "API Only", 17333, "127.0.0.1", "Test");
+        let api = default_agent_api_entry("api-only", "API Only", 54322, "127.0.0.1", "Test");
         let apps = capability_catalog_apps(&[catalog_app], &[], &[api]);
 
         assert_eq!(
