@@ -1,6 +1,6 @@
 {
-  "catalogVersion": 18,
-  "updatedAt": "2026-06-30",
+  "catalogVersion": 19,
+  "updatedAt": "2026-07-10",
   "tools": [
     {
       "id": "asset-vault",
@@ -45,9 +45,9 @@
       "description": "Batch depth-map and WebP generator for local AI image workflows.",
       "accent": "#43b883",
       "icon": "DM",
-      "category": "Under Development",
+      "category": "Released Tools",
       "packagePreference": "portable",
-      "status": "comingSoon",
+      "status": "available",
       "visible": true
     },
     {

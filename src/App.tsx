@@ -174,7 +174,7 @@ const fallbackState: ControlCenterState = {
   apps: [
     app('batchlapse', 'BatchLapse', 'BatchLapse', 'Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs.', '#5b8def', 'BL', releasedToolsCategory),
     app('cutscene-converter', 'Cutscene Converter', 'CutsceneConverter', 'Godot-friendly cutscene video converter for MP4, WebM, and OGV.', '#f06f48', 'CC', releasedToolsCategory),
-    app('depth-map-ai-generator', 'DepthMap AI', 'depth-map-generator', 'Batch depth-map and WebP generator for local AI image workflows.', '#43b883', 'DM', 'Under Development', null, 'comingSoon'),
+    app('depth-map-ai-generator', 'DepthMap AI', 'depth-map-generator', 'Batch depth-map and WebP generator for local AI image workflows.', '#43b883', 'DM', releasedToolsCategory),
     app('image-to-ascii-3d', 'ASCII 3D', 'ImageToASCII3D', 'Image-to-ASCII converter with optional depth-map driven 3D parallax exports.', '#f0a848', 'A3', 'Under Development', null, 'comingSoon'),
     app('image-to-3d', 'Image to 3D', 'ImageTo3D', 'Local image-to-3D workflow for mesh, texture, and 3D asset generation.', '#8c65df', 'I3', 'Under Development'),
     app('multi-angle-edit', 'Multi-Angle Edit', 'multi-angle-edit', 'Local multi-angle image editor: re-render a photo from a new camera angle with Qwen-Image-Edit + the Multiple-Angles LoRA on your own GPU.', '#b14bff', 'MA', releasedToolsCategory),
