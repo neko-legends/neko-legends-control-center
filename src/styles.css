@@ -813,6 +813,35 @@ button {
   background: rgb(255 106 0 / 0.07);
 }
 
+.category-row.collapsed {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.category-collapse {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+}
+
+.category-collapse:hover,
+.category-collapse:focus-visible {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  outline: none;
+}
+
+.category-collapse:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 52%, transparent);
+}
+
 .theme-rose-noir .category-row:hover {
   background: rgb(255 111 158 / 0.085);
 }

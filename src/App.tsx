@@ -3,6 +3,8 @@ import { listen } from '@tauri-apps/api/event'
 import { open } from '@tauri-apps/plugin-dialog'
 import {
   AppWindow,
+  ChevronDown,
+  ChevronRight,
   Download,
   ExternalLink,
   FolderOpen,
@@ -166,6 +168,7 @@ const funStuffCategory = 'Fun Stuff'
 const defaultCategories = [releasedToolsCategory, funStuffCategory, underDevelopmentCategory]
 const githubOwner = 'neko-legends'
 const bootReleaseScanMaxAgeMs = 12 * 60 * 60 * 1000
+const collapsedCategoriesStorageKey = 'neko-legends-control-center.collapsed-categories.v1'
 
 const fallbackState: ControlCenterState = {
   settings: { theme: 'neko-tron', compactLabels: false, useRemoteCatalog: true, agentControlAutoStart: false, categories: defaultCategories },
@@ -404,15 +407,36 @@ function orderedCategories(apps: LauncherApp[], categories: string[]): string[] 
   return nextCategories
 }
 
+function loadCollapsedCategories(): string[] {
+  if (typeof window === 'undefined') return []
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(collapsedCategoriesStorageKey) ?? '[]')
+    if (!Array.isArray(parsed)) return []
+    return Array.from(new Set(parsed.filter((value): value is string => typeof value === 'string').map(categoryLabel)))
+  } catch {
+    return []
+  }
+}
+
+function storeCollapsedCategories(categories: string[]) {
+  try {
+    window.localStorage.setItem(collapsedCategoriesStorageKey, JSON.stringify(categories))
+  } catch {
+    // Category disclosure still works for the current session when storage is unavailable.
+  }
+}
+
 type GridItem =
   | { kind: 'category'; id: string; label: string }
   | { kind: 'app'; app: LauncherApp }
 
-function gridItems(apps: LauncherApp[], categories: string[]): GridItem[] {
+function gridItems(apps: LauncherApp[], categories: string[], collapsedCategories: ReadonlySet<string>): GridItem[] {
   const items: GridItem[] = []
 
   for (const category of categories) {
     items.push({ kind: 'category', id: `category-${category}`, label: category })
+    if (collapsedCategories.has(category)) continue
     for (const appInfo of apps.filter((candidate) => categoryLabel(candidate.category) === category)) {
       items.push({ kind: 'app', app: appInfo })
     }
@@ -563,6 +587,7 @@ export default function App() {
   const [agentApiPortEdits, setAgentApiPortEdits] = useState<Record<string, string>>({})
   const [scanProgress, setScanProgress] = useState<ReleaseScanProgress | null>(null)
   const [newReleaseIds, setNewReleaseIds] = useState<string[]>([])
+  const [collapsedCategories, setCollapsedCategories] = useState<string[]>(loadCollapsedCategories)
   const draggedItemRef = useRef<DragItem | null>(null)
   const pointerDragRef = useRef<PointerDrag | null>(null)
   const dragListenersRef = useRef<DragListeners | null>(null)
@@ -588,7 +613,11 @@ export default function App() {
   const missingCount = visibleApps.filter((candidate) => hasKnownRelease(candidate) && !isAppDownloaded(candidate)).length
   const hiddenCount = state.apps.length - visibleApps.length
   const layoutCategories = useMemo(() => orderedCategories(state.apps, state.settings.categories), [state.apps, state.settings.categories])
-  const visibleGridItems = useMemo(() => gridItems(visibleApps, layoutCategories), [layoutCategories, visibleApps])
+  const collapsedCategorySet = useMemo(() => new Set(collapsedCategories), [collapsedCategories])
+  const visibleGridItems = useMemo(
+    () => gridItems(visibleApps, layoutCategories, collapsedCategorySet),
+    [collapsedCategorySet, layoutCategories, visibleApps],
+  )
   const contextMenuApp = useMemo(
     () => contextMenu ? state.apps.find((candidate) => candidate.id === contextMenu.appId) ?? null : null,
     [contextMenu, state.apps],
@@ -1704,6 +1733,8 @@ export default function App() {
   async function resetLayout() {
     setBusy(true)
     try {
+      setCollapsedCategories([])
+      storeCollapsedCategories([])
       if (!isTauriRuntime()) {
         const apps = fallbackState.apps.map((candidate) => ({ ...candidate, visible: true }))
         setState((current) => ({ ...current, apps, settings: { ...current.settings, categories: defaultCategories } }))
@@ -1724,6 +1755,17 @@ export default function App() {
     } finally {
       setBusy(false)
     }
+  }
+
+  function toggleCategoryCollapsed(category: string) {
+    const normalizedCategory = categoryLabel(category)
+    setCollapsedCategories((current) => {
+      const next = current.includes(normalizedCategory)
+        ? current.filter((candidate) => candidate !== normalizedCategory)
+        : [...current, normalizedCategory]
+      storeCollapsedCategories(next)
+      return next
+    })
   }
 
   return (
@@ -1954,9 +1996,10 @@ export default function App() {
         >
           {visibleGridItems.map((item) => {
             if (item.kind === 'category') {
+              const collapsed = collapsedCategorySet.has(item.label)
               return (
                 <div
-                  className="category-row"
+                  className={classNames('category-row', collapsed && 'collapsed')}
                   key={item.id}
                   data-category={item.label}
                   onPointerDown={(event) => startPointerDrag(event, { kind: 'category', label: item.label })}
@@ -1971,6 +2014,20 @@ export default function App() {
                     handleDropOnCategory(event, item.label)
                   }}
                 >
+                  <button
+                    type="button"
+                    className="category-collapse"
+                    aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${item.label}`}
+                    aria-expanded={!collapsed}
+                    title={`${collapsed ? 'Expand' : 'Collapse'} ${item.label}`}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      toggleCategoryCollapsed(item.label)
+                    }}
+                  >
+                    {collapsed ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
+                  </button>
                   <GripVertical size={13} />
                   <span>{`-= ${item.label} =-`}</span>
                 </div>
