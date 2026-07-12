@@ -1025,6 +1025,10 @@ export default function App() {
         request: { appId: appInfo.id, executablePath: selected },
       })
       setState((current) => ({ ...current, apps }))
+      const savedApp = apps.find((candidate) => candidate.id === appInfo.id)
+      if (savedApp?.selectedVersion) {
+        setSelectedReleaseTags((current) => ({ ...current, [appInfo.id]: savedApp.selectedVersion! }))
+      }
       setNotice(`${appInfo.name} launch file saved`)
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error))
@@ -2151,7 +2155,7 @@ export default function App() {
               <div className="version-picker-row">
                 <select
                   value={selectedVersionFor(selectedApp) ?? ''}
-                  disabled={busy || selectedApp.releaseOptions.length === 0}
+                  disabled={busy || (selectedApp.releaseOptions.length === 0 && selectedApp.installedVersions.length === 0)}
                   onChange={(event) => setSelectedReleaseTags((current) => ({ ...current, [selectedApp.id]: event.currentTarget.value }))}
                 >
                   {selectedApp.releaseOptions.length === 0 && <option value="">Scan releases</option>}
@@ -2160,6 +2164,13 @@ export default function App() {
                       {release.tagName}{isVersionInstalled(selectedApp, release.tagName) ? ' (Installed)' : ''}
                     </option>
                   ))}
+                  {selectedApp.installedVersions
+                    .filter((installed) => !selectedApp.releaseOptions.some((release) => release.tagName === installed.version))
+                    .map((installed) => (
+                      <option value={installed.version} key={installed.version}>
+                        {installed.version} (Installed)
+                      </option>
+                    ))}
                 </select>
                 {selectedVersionInstalled(selectedApp) && <strong className="installed-version-badge">(Installed)</strong>}
               </div>

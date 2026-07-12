@@ -1725,6 +1725,43 @@ fn add_installed_version(
     );
 }
 
+fn manual_version_label(launcher_app: &LauncherApp, path: &Path) -> String {
+    if let Some(existing) = launcher_app.installed_versions.iter().find(|installed| {
+        installed
+            .executable_path
+            .as_deref()
+            .is_some_and(|existing_path| Path::new(existing_path) == path)
+    }) {
+        return existing.version.clone();
+    }
+
+    let name = path
+        .parent()
+        .and_then(Path::file_name)
+        .and_then(|value| value.to_str())
+        .filter(|value| !value.trim().is_empty())
+        .or_else(|| path.file_stem().and_then(|value| value.to_str()))
+        .unwrap_or("Portable");
+    let base = format!("Custom: {name}");
+    if !launcher_app
+        .installed_versions
+        .iter()
+        .any(|installed| installed.version == base)
+    {
+        return base;
+    }
+
+    (2..)
+        .map(|suffix| format!("{base} ({suffix})"))
+        .find(|candidate| {
+            !launcher_app
+                .installed_versions
+                .iter()
+                .any(|installed| installed.version == *candidate)
+        })
+        .unwrap_or(base)
+}
+
 fn normalize_install_state(launcher_app: &mut LauncherApp) {
     let demo_app = launcher_app.demo_url.is_some();
     launcher_app.installed_versions.retain(|installed| {
@@ -2978,7 +3015,16 @@ fn save_executable(
     if !is_launch_path(&path) {
         return Err("Choose an .exe, .html, or .htm launch file.".to_string());
     }
+    let version = manual_version_label(target, &path);
+    add_installed_version(target, version.clone(), Some(&path), None);
     target.executable_path = Some(path.to_string_lossy().to_string());
+    target.installed_version = Some(version.clone());
+    target.selected_version = Some(version);
+    if target.installed_versions.len() > MAX_INSTALLED_APP_VERSIONS {
+        target
+            .installed_versions
+            .truncate(MAX_INSTALLED_APP_VERSIONS);
+    }
     save_apps(&app, &apps)?;
     Ok(apps)
 }
@@ -4010,6 +4056,51 @@ mod tests {
         ));
         fs::create_dir_all(&path).unwrap();
         path
+    }
+
+    #[test]
+    fn manual_executable_gets_a_selectable_custom_version() {
+        let root = test_dir("manual-version");
+        let portable_dir = root.join("portable-v2");
+        fs::create_dir_all(&portable_dir).unwrap();
+        let executable = portable_dir.join("test-app.exe");
+        fs::write(&executable, b"test").unwrap();
+        let old_executable = root.join("installed.exe");
+        fs::write(&old_executable, b"test").unwrap();
+
+        let mut launcher_app = app(
+            "test-app",
+            "Test App",
+            "TestApp",
+            "Test app.",
+            "#ffffff",
+            "TA",
+            RELEASED_TOOLS_CATEGORY,
+            ToolStatus::Available,
+            None,
+        );
+        launcher_app.installed_versions.push(InstalledVersion {
+            version: "v1.0.0".to_string(),
+            executable_path: Some(old_executable.to_string_lossy().to_string()),
+            package_path: None,
+            installed_at: "2026-07-09T00:00:00Z".to_string(),
+        });
+
+        let version = manual_version_label(&launcher_app, &executable);
+        add_installed_version(&mut launcher_app, version.clone(), Some(&executable), None);
+        select_installed_version(&mut launcher_app, &version).unwrap();
+
+        assert_eq!(version, "Custom: portable-v2");
+        assert_eq!(
+            launcher_app.selected_version.as_deref(),
+            Some(version.as_str())
+        );
+        assert_eq!(
+            launcher_app.executable_path.as_deref(),
+            Some(executable.to_string_lossy().as_ref())
+        );
+
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
