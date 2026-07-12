@@ -64,6 +64,8 @@ struct LauncherApp {
     icon: String,
     #[serde(default = "default_category")]
     category: String,
+    #[serde(default)]
+    previous_categories: Vec<String>,
     executable_path: Option<String>,
     installed_version: Option<String>,
     selected_version: Option<String>,
@@ -458,7 +460,7 @@ fn default_true() -> bool {
 }
 
 fn default_catalog_version() -> u32 {
-    15
+    21
 }
 
 fn default_category() -> String {
@@ -590,7 +592,7 @@ fn default_apps() -> Vec<LauncherApp> {
         app("batchlapse", "BatchLapse", "BatchLapse", "Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs.", "#5b8def", "BL", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("cutscene-converter", "Cutscene Converter", "CutsceneConverter", "Godot-friendly cutscene video converter for MP4, WebM, and OGV.", "#f06f48", "CC", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("depth-map-ai-generator", "DepthMap AI", "depth-map-generator", "Batch depth-map and WebP generator for local AI image workflows.", "#43b883", "DM", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
-        app("image-to-ascii-3d", "ASCII 3D", "ImageToASCII3D", "Image-to-ASCII converter with optional depth-map driven 3D parallax exports.", "#f0a848", "A3", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
+        with_previous_categories(app("image-to-ascii-3d", "ASCII 3D", "ImageToASCII3D", "Image-to-ASCII converter with optional depth-map driven 3D parallax exports.", "#f0a848", "A3", FUN_STUFF_CATEGORY, ToolStatus::Available, None), &[UNDER_DEVELOPMENT_CATEGORY]),
         app("image-to-3d", "Image to 3D", "ImageTo3D", "Local image-to-3D workflow for mesh, texture, and 3D asset generation.", "#8c65df", "I3", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::Available, None),
         app("multi-angle-edit", "Multi-Angle Edit", "multi-angle-edit", "Local multi-angle image editor: re-render a photo from a new camera angle with Qwen-Image-Edit + the Multiple-Angles LoRA on your own GPU.", "#b14bff", "MA", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("image-to-splat", "ImageToSplat", "ImageToSplat", "Local TripoSplat workflow for turning a single image into Gaussian splat and point-cloud 3D exports.", "#55c7f7", "IS", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
@@ -625,6 +627,7 @@ fn app(
         accent: accent.to_string(),
         icon: icon.to_string(),
         category: category.to_string(),
+        previous_categories: Vec::new(),
         executable_path: None,
         installed_version: None,
         selected_version: None,
@@ -640,6 +643,14 @@ fn app(
         status,
         visible: true,
     }
+}
+
+fn with_previous_categories(mut launcher_app: LauncherApp, categories: &[&str]) -> LauncherApp {
+    launcher_app.previous_categories = categories
+        .iter()
+        .map(|category| category.to_string())
+        .collect();
+    launcher_app
 }
 
 fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -1600,7 +1611,14 @@ fn merge_catalog_apps(saved: Vec<LauncherApp>, defaults: Vec<LauncherApp>) -> Ve
             app.package_path = saved_app.package_path;
             app.visible = saved_app.visible;
             if !saved_app.category.trim().is_empty() {
-                app.category = clean_category_label(&saved_app.category);
+                let saved_category = clean_category_label(&saved_app.category);
+                let is_previous_catalog_category = app
+                    .previous_categories
+                    .iter()
+                    .any(|category| clean_category_label(category) == saved_category);
+                if !is_previous_catalog_category {
+                    app.category = saved_category;
+                }
             }
             if has_public_release(&app) {
                 promote_released_app(&mut app);
@@ -4101,6 +4119,38 @@ mod tests {
         );
 
         fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn catalog_category_migration_preserves_customization_and_visibility() {
+        let default_app = with_previous_categories(
+            app(
+                "test-app",
+                "Test App",
+                "TestApp",
+                "Test app.",
+                "#ffffff",
+                "TA",
+                FUN_STUFF_CATEGORY,
+                ToolStatus::Available,
+                None,
+            ),
+            &[UNDER_DEVELOPMENT_CATEGORY],
+        );
+
+        let mut legacy_app = default_app.clone();
+        legacy_app.category = UNDER_DEVELOPMENT_CATEGORY.to_string();
+        legacy_app.status = ToolStatus::ComingSoon;
+        legacy_app.visible = false;
+        let migrated = merge_catalog_apps(vec![legacy_app], vec![default_app.clone()]);
+        assert_eq!(migrated[0].category, FUN_STUFF_CATEGORY);
+        assert_eq!(migrated[0].status, ToolStatus::Available);
+        assert!(!migrated[0].visible);
+
+        let mut customized_app = default_app.clone();
+        customized_app.category = "My Favorites".to_string();
+        let customized = merge_catalog_apps(vec![customized_app], vec![default_app]);
+        assert_eq!(customized[0].category, "My Favorites");
     }
 
     #[test]

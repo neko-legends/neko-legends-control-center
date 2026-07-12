@@ -1,5 +1,5 @@
 {
-  "catalogVersion": 20,
+  "catalogVersion": 21,
   "updatedAt": "2026-07-12",
   "tools": [
     {
@@ -57,9 +57,10 @@
       "description": "Image-to-ASCII converter with optional depth-map driven 3D parallax exports.",
       "accent": "#f0a848",
       "icon": "A3",
-      "category": "Under Development",
+      "category": "Fun Stuff",
+      "previousCategories": ["Under Development"],
       "packagePreference": "portable",
-      "status": "comingSoon",
+      "status": "available",
       "visible": true
     },
     {
