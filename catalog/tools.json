@@ -1,6 +1,6 @@
 {
-  "catalogVersion": 19,
-  "updatedAt": "2026-07-10",
+  "catalogVersion": 20,
+  "updatedAt": "2026-07-12",
   "tools": [
     {
       "id": "asset-vault",
@@ -17,7 +17,7 @@
     {
       "id": "batchlapse",
       "name": "BatchLapse",
-      "repo": "BatchLapse",
+      "repo": "batch-lapse",
       "description": "Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs.",
       "accent": "#5b8def",
       "icon": "BL",
