@@ -492,9 +492,6 @@ fn normalize_development_status(launcher_app: &mut LauncherApp) {
 
 fn promote_released_app(launcher_app: &mut LauncherApp) {
     launcher_app.status = ToolStatus::Available;
-    if is_under_development_category(&launcher_app.category) {
-        launcher_app.category = default_category();
-    }
 }
 
 fn clear_coming_soon_release_state(launcher_app: &mut LauncherApp) {
@@ -592,7 +589,7 @@ fn default_apps() -> Vec<LauncherApp> {
         app("batchlapse", "BatchLapse", "BatchLapse", "Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs.", "#5b8def", "BL", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("cutscene-converter", "Cutscene Converter", "CutsceneConverter", "Godot-friendly cutscene video converter for MP4, WebM, and OGV.", "#f06f48", "CC", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("depth-map-ai-generator", "DepthMap AI", "depth-map-generator", "Batch depth-map and WebP generator for local AI image workflows.", "#43b883", "DM", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
-        with_previous_categories(app("image-to-ascii-3d", "ASCII 3D", "ImageToASCII3D", "Image-to-ASCII converter with optional depth-map driven 3D parallax exports.", "#f0a848", "A3", FUN_STUFF_CATEGORY, ToolStatus::Available, None), &[UNDER_DEVELOPMENT_CATEGORY]),
+        with_previous_categories(app("image-to-ascii-3d", "ASCII 3D", "ImageToASCII3D", "Image-to-ASCII converter with optional depth-map driven 3D parallax exports.", "#f0a848", "A3", FUN_STUFF_CATEGORY, ToolStatus::Available, None), &[UNDER_DEVELOPMENT_CATEGORY, RELEASED_TOOLS_CATEGORY]),
         app("image-to-3d", "Image to 3D", "ImageTo3D", "Local image-to-3D workflow for mesh, texture, and 3D asset generation.", "#8c65df", "I3", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::Available, None),
         app("multi-angle-edit", "Multi-Angle Edit", "multi-angle-edit", "Local multi-angle image editor: re-render a photo from a new camera angle with Qwen-Image-Edit + the Multiple-Angles LoRA on your own GPU.", "#b14bff", "MA", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("image-to-splat", "ImageToSplat", "ImageToSplat", "Local TripoSplat workflow for turning a single image into Gaussian splat and point-cloud 3D exports.", "#55c7f7", "IS", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
@@ -4135,7 +4132,7 @@ mod tests {
                 ToolStatus::Available,
                 None,
             ),
-            &[UNDER_DEVELOPMENT_CATEGORY],
+            &[UNDER_DEVELOPMENT_CATEGORY, RELEASED_TOOLS_CATEGORY],
         );
 
         let mut legacy_app = default_app.clone();
@@ -4147,10 +4144,34 @@ mod tests {
         assert_eq!(migrated[0].status, ToolStatus::Available);
         assert!(!migrated[0].visible);
 
+        let mut incorrectly_promoted_app = default_app.clone();
+        incorrectly_promoted_app.category = RELEASED_TOOLS_CATEGORY.to_string();
+        let repaired =
+            merge_catalog_apps(vec![incorrectly_promoted_app], vec![default_app.clone()]);
+        assert_eq!(repaired[0].category, FUN_STUFF_CATEGORY);
+
         let mut customized_app = default_app.clone();
         customized_app.category = "My Favorites".to_string();
         let customized = merge_catalog_apps(vec![customized_app], vec![default_app]);
         assert_eq!(customized[0].category, "My Favorites");
+    }
+
+    #[test]
+    fn release_promotion_keeps_the_catalog_category() {
+        let mut launcher_app = app(
+            "test-app",
+            "Test App",
+            "TestApp",
+            "Test app.",
+            "#ffffff",
+            "TA",
+            FUN_STUFF_CATEGORY,
+            ToolStatus::ComingSoon,
+            None,
+        );
+        promote_released_app(&mut launcher_app);
+        assert_eq!(launcher_app.status, ToolStatus::Available);
+        assert_eq!(launcher_app.category, FUN_STUFF_CATEGORY);
     }
 
     #[test]

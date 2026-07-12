@@ -58,7 +58,7 @@
       "accent": "#f0a848",
       "icon": "A3",
       "category": "Fun Stuff",
-      "previousCategories": ["Under Development"],
+      "previousCategories": ["Under Development", "Released Tools"],
       "packagePreference": "portable",
       "status": "available",
       "visible": true
