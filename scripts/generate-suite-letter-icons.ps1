@@ -20,7 +20,7 @@ $apps = @(
   @{ Code = 'DM'; Name = 'depth-map-generator'; Root = Join-Path $suiteRoot 'depth-map-generator'; Tauri = 'src-tauri\icons' },
   @{ Code = 'A3'; Name = 'ImageToASCII3D'; Root = Join-Path $suiteRoot 'ImageToASCII3D'; Tauri = 'src-tauri\icons'; WebIcon = 'apps\web\public\icon.png' },
   @{ Code = 'MR'; Name = 'MarkRush'; Root = Join-Path $suiteRoot 'MarkRush'; MarkRush = $true },
-  @{ Code = 'OS'; Name = 'OpenSplit'; Root = Join-Path $suiteRoot 'OpenSplit'; Tauri = 'src-tauri\icons' },
+  @{ Code = 'OS'; Name = 'OpenSplit'; Root = Join-Path $suiteRoot 'open-split'; Tauri = 'src-tauri\icons' },
   @{ Code = 'SI'; Name = 'SeamlessImageEdit'; Root = Join-Path $suiteRoot 'SeamlessImageEdit'; Tauri = 'src-tauri\icons' },
   @{ Code = 'VM'; Name = 'VeniceMediaLocal'; Root = Join-Path $suiteRoot 'venice-media-local'; Tauri = 'src-tauri\icons' },
   @{ Code = 'PP'; Name = 'PurplePlanet'; Root = Join-Path $suiteRoot 'PurplePlanet\PurplePlanet\src\PurplePlanet'; DotNetIcon = 'Assets\PurplePlanet.ico'; DotNetPng = 'Assets\PurplePlanet-256.png' },

@@ -186,7 +186,7 @@ const fallbackState: ControlCenterState = {
     app('splatscape', 'SplatScape', 'SplatScape', 'Portable FPS-style explorer for 3D Gaussian splat scenes with WASD and mouse-look navigation.', '#7adfbb', 'SS', 'Under Development', null, 'comingSoon'),
     app('painterly-clouds-3d', 'Painterly Clouds 3D', 'painterly-clouds-3d', 'Painterly Three.js cloud scene for stylized skyboxes, wallpapers, and motion art.', '#7fb7ff', 'PC', 'Under Development', null, 'comingSoon'),
     app('markrush', 'MarkRush', 'MarkRush', 'Fast local Markdown viewer/editor built for huge files and folders.', '#e05d7b', 'MR', releasedToolsCategory),
-    app('opensplit', 'OpenSplit', 'OpenSplit', 'Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.', '#4fb6d8', 'OS', releasedToolsCategory),
+    app('opensplit', 'OpenSplit', 'open-split', 'Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.', '#4fb6d8', 'OS', releasedToolsCategory),
     app('seamless-image-edit', 'Seamless Image Edit', 'SeamlessImageEdit', 'Local image tiling and seamless texture prep for game art workflows.', '#d889ff', 'SI', releasedToolsCategory),
     app('sprite-atlas-packer', 'Sprite Atlas Packer', 'sprite-atlas-packer', 'Turn loose sprite frames into deterministic TexturePacker-compatible PNG/WebP atlases.', '#39a7ff', 'SA', releasedToolsCategory),
     app('venice-media-local', 'Venice Media', 'venice-media-local', 'Local Venice API media workspace for images, video, music, voice, and cleanup.', '#34c6a3', 'VM', releasedToolsCategory),
@@ -2100,7 +2100,39 @@ export default function App() {
                       : void chooseExecutable(appInfo)
                 }}
               >
-                <span className="app-icon">{appInfo.icon}</span>
+                <span
+                  className="app-icon"
+                  role="button"
+                  tabIndex={0}
+                  title={`Launch ${appInfo.name}`}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    if (suppressClickRef.current) {
+                      return
+                    }
+                    if (appInfo.demoUrl) {
+                      void viewDemo(appInfo)
+                    } else if (canLaunchSelectedVersion(appInfo)) {
+                      void launchApp(appInfo)
+                    } else {
+                      // Not launchable yet — open the detail panel so the user
+                      // can install/configure, matching a plain card click.
+                      setSelectedId(appInfo.id)
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Enter' && event.key !== ' ') return
+                    event.preventDefault()
+                    event.stopPropagation()
+                    if (appInfo.demoUrl) {
+                      void viewDemo(appInfo)
+                    } else if (canLaunchSelectedVersion(appInfo)) {
+                      void launchApp(appInfo)
+                    } else {
+                      setSelectedId(appInfo.id)
+                    }
+                  }}
+                >{appInfo.icon}</span>
                 <span className="app-copy">
                   <strong>{appInfo.name}</strong>
                   <small className={classNames('app-status', tileStatus)}>

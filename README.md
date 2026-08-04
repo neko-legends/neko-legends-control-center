@@ -45,7 +45,7 @@ Catalog snapshot: `catalog/tools.json` version 19, updated 2026-07-10.
 | DepthMap AI | [neko-legends/depth-map-generator](https://github.com/neko-legends/depth-map-generator) | Batch depth-map and WebP generator for local AI image workflows. |
 | MarkRush | [neko-legends/MarkRush](https://github.com/neko-legends/MarkRush) | Fast local Markdown viewer/editor built for huge files and folders. |
 | Multi-Angle Edit | [neko-legends/multi-angle-edit](https://github.com/neko-legends/multi-angle-edit) | Re-render an existing image from a new camera angle with Qwen-Image-Edit plus the Multiple-Angles LoRA. |
-| OpenSplit | [neko-legends/OpenSplit](https://github.com/neko-legends/OpenSplit) | Multi-pane terminal harness for AI coding agents, shells, and SSH sessions. |
+| OpenSplit | [neko-legends/open-split](https://github.com/neko-legends/open-split) | Multi-pane terminal harness for AI coding agents, shells, and SSH sessions. |
 | Seamless Image Edit | [neko-legends/SeamlessImageEdit](https://github.com/neko-legends/SeamlessImageEdit) | Create seamless and tileable texture outputs from images or folders with seam repair, flattening, and 2x2 preview. |
 | Sprite Atlas Packer | [neko-legends/sprite-atlas-packer](https://github.com/neko-legends/sprite-atlas-packer) | Turn loose sprite frames into deterministic TexturePacker-compatible PNG/WebP atlases. |
 | Venice Media | [neko-legends/venice-media-local](https://github.com/neko-legends/venice-media-local) | Local Venice API media workspace for images, video, music, voice, and cleanup. |

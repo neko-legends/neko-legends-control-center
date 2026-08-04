@@ -1,6 +1,6 @@
 {
-  "catalogVersion": 21,
-  "updatedAt": "2026-07-12",
+  "catalogVersion": 22,
+  "updatedAt": "2026-08-01",
   "tools": [
     {
       "id": "asset-vault",
@@ -70,9 +70,9 @@
       "description": "Local image-to-3D workflow for mesh, texture, and 3D asset generation.",
       "accent": "#8c65df",
       "icon": "I3",
-      "category": "Under Development",
+      "category": "Released Tools",
       "packagePreference": "portable",
-      "status": "comingSoon",
+      "status": "available",
       "visible": true
     },
     {
@@ -90,7 +90,7 @@
     {
       "id": "opensplit",
       "name": "OpenSplit",
-      "repo": "OpenSplit",
+      "repo": "open-split",
       "description": "Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.",
       "accent": "#4fb6d8",
       "icon": "OS",

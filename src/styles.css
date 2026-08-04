@@ -997,6 +997,24 @@ button {
   font-weight: 900;
   text-shadow: 0 0 10px rgb(255 176 0 / 0.58);
   box-shadow: inset 0 0 18px rgb(255 106 0 / 0.18), 0 0 14px rgb(255 106 0 / 0.22);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* The icon doubles as a quick-launch button. */
+.app-icon:hover {
+  filter: brightness(1.18);
+  border-color: color-mix(in srgb, var(--accent) 95%, #2b1003);
+  box-shadow: inset 0 0 22px rgb(255 106 0 / 0.28), 0 0 20px rgb(255 106 0 / 0.38);
+}
+
+.app-icon:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+
+.app-icon:active {
+  filter: brightness(1.05);
 }
 
 .theme-rose-noir .app-icon {

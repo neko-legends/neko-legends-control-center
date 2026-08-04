@@ -596,7 +596,7 @@ fn default_apps() -> Vec<LauncherApp> {
         app("splatscape", "SplatScape", "SplatScape", "Portable FPS-style explorer for 3D Gaussian splat scenes with WASD and mouse-look navigation.", "#7adfbb", "SS", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
         app("painterly-clouds-3d", "Painterly Clouds 3D", "painterly-clouds-3d", "Painterly Three.js cloud scene for stylized skyboxes, wallpapers, and motion art.", "#7fb7ff", "PC", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
         app("markrush", "MarkRush", "MarkRush", "Fast local Markdown viewer/editor built for huge files and folders.", "#e05d7b", "MR", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
-        app("opensplit", "OpenSplit", "OpenSplit", "Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.", "#4fb6d8", "OS", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
+        app("opensplit", "OpenSplit", "open-split", "Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.", "#4fb6d8", "OS", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("seamless-image-edit", "Seamless Image Edit", "SeamlessImageEdit", "Local image tiling and seamless texture prep for game art workflows.", "#d889ff", "SI", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("sprite-atlas-packer", "Sprite Atlas Packer", "sprite-atlas-packer", "Turn loose sprite frames into deterministic TexturePacker-compatible PNG/WebP atlases.", "#39a7ff", "SA", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("venice-media-local", "Venice Media", "venice-media-local", "Local Venice API media workspace for images, video, music, voice, and cleanup.", "#34c6a3", "VM", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
@@ -1864,9 +1864,14 @@ fn detect_local_install(launcher_app: &LauncherApp) -> Option<DetectedInstall> {
         });
     }
 
-    let launch_path = find_best_launch_path(&root, &launcher_app.id, &launcher_app.repo)
-        .ok()
-        .flatten()?;
+    let launch_path = find_best_launch_path(
+        &root,
+        &launcher_app.id,
+        &launcher_app.repo,
+        &launcher_app.name,
+    )
+    .ok()
+    .flatten()?;
     cleanup_redundant_archives_near_launch_path(&launch_path);
 
     Some(DetectedInstall {
@@ -1974,9 +1979,12 @@ fn registry_executable_candidates(key: &RegKey, launcher_app: &LauncherApp) -> V
                         .into_iter()
                         .map(|name| path.join(name)),
                 );
-                if let Ok(Some(best)) =
-                    find_best_executable(&path, &launcher_app.id, &launcher_app.repo)
-                {
+                if let Ok(Some(best)) = find_best_executable(
+                    &path,
+                    &launcher_app.id,
+                    &launcher_app.repo,
+                    &launcher_app.name,
+                ) {
                     candidates.push(best);
                 }
             }
@@ -1991,9 +1999,12 @@ fn registry_executable_candidates(key: &RegKey, launcher_app: &LauncherApp) -> V
                         .into_iter()
                         .map(|name| parent.join(name)),
                 );
-                if let Ok(Some(best)) =
-                    find_best_executable(parent, &launcher_app.id, &launcher_app.repo)
-                {
+                if let Ok(Some(best)) = find_best_executable(
+                    parent,
+                    &launcher_app.id,
+                    &launcher_app.repo,
+                    &launcher_app.name,
+                ) {
                     candidates.push(best);
                 }
             }
@@ -2021,7 +2032,33 @@ fn app_install_name_aliases(launcher_app: &LauncherApp) -> Vec<String> {
     if launcher_app.id == VENICE_MEDIA_LOCAL_ID {
         aliases.push(VENICE_MEDIA_LOCAL_DISPLAY_NAME.to_string());
     }
+    // Some apps ship under a productName that differs from id/repo/name and is
+    // what the NSIS installer registers as DisplayName. Add those so registry
+    // detection matches the real install. Keep in sync with
+    // executable_name_overrides, which covers the portable-exe name for the
+    // same apps.
+    match launcher_app.id.as_str() {
+        "depth-map-ai-generator" => aliases.push("DepthMap AI Generator".to_string()),
+        _ => {}
+    }
     aliases
+}
+
+/// Explicit executable filenames for apps whose built binary name diverges from
+/// what [`expected_executable_names`] would derive from id/repo/name. Keyed by
+/// `app_id`. The values are the exact on-disk filenames (case-insensitive on
+/// Windows). Add an entry whenever an app's `productName` (which Tauri uses for
+/// the built exe) doesn't line up with its id/repo/name.
+#[cfg(windows)]
+fn executable_name_overrides(app_id: &str) -> Vec<String> {
+    match app_id {
+        // productName "DepthMap AI Generator" -> exe "DepthMap AI Generator.exe".
+        // Neither id ("depth-map-ai-generator") nor repo ("depth-map-generator")
+        // nor display name ("DepthMap AI") matches the built binary, so the
+        // heuristic below would never find it. Pin it explicitly.
+        "depth-map-ai-generator" => vec!["DepthMap AI Generator.exe".to_string()],
+        _ => Vec::new(),
+    }
 }
 
 #[cfg(windows)]
@@ -2032,6 +2069,7 @@ fn expected_executable_names(launcher_app: &LauncherApp) -> Vec<String> {
         format!("{}.exe", normalized_install_name(&launcher_app.repo)),
         format!("{}.exe", normalized_install_name(&launcher_app.name)),
     ];
+    names.extend(executable_name_overrides(&launcher_app.id));
     names.sort();
     names.dedup();
     names
@@ -2466,17 +2504,22 @@ fn emit_release_scan_progress(
     );
 }
 
-fn executable_score(path: &Path, app_id: &str, repo: &str) -> i32 {
+fn executable_score(path: &Path, app_id: &str, repo: &str, app_name: &str) -> i32 {
     let name = path
         .file_name()
         .and_then(|value| value.to_str())
         .unwrap_or_default()
         .to_ascii_lowercase();
+    let compact: String = name
+        .chars()
+        .filter(|character| character.is_ascii_alphanumeric())
+        .collect();
     let app_id = app_id.to_ascii_lowercase();
     let repo = repo.to_ascii_lowercase();
+    let compact_app_name = normalized_compact_name(app_name);
     let mut score = 10;
 
-    if name.contains(&app_id) || name.contains(&repo) {
+    if name.contains(&app_id) || name.contains(&repo) || compact_app_name.is_some_and(|c| compact.contains(&c)) {
         score += 40;
     }
     if name.contains("portable") {
@@ -2492,7 +2535,28 @@ fn executable_score(path: &Path, app_id: &str, repo: &str) -> i32 {
     score
 }
 
-fn find_best_executable(root: &Path, app_id: &str, repo: &str) -> Result<Option<PathBuf>, String> {
+/// Compact (alphanumeric-only, lowercase) form of a display name, e.g.
+/// "DepthMap AI" -> "depthmapai". Returns `None` when the result is too short
+/// to be a meaningful match signal (avoids spurious matches like "AI").
+fn normalized_compact_name(value: &str) -> Option<String> {
+    let compact: String = value
+        .chars()
+        .filter(|character| character.is_ascii_alphanumeric())
+        .flat_map(|character| character.to_lowercase())
+        .collect();
+    if compact.len() >= 5 {
+        Some(compact)
+    } else {
+        None
+    }
+}
+
+fn find_best_executable(
+    root: &Path,
+    app_id: &str,
+    repo: &str,
+    app_name: &str,
+) -> Result<Option<PathBuf>, String> {
     let mut stack = vec![root.to_path_buf()];
     let mut best: Option<(i32, PathBuf)> = None;
 
@@ -2509,7 +2573,7 @@ fn find_best_executable(root: &Path, app_id: &str, repo: &str) -> Result<Option<
                 .and_then(|extension| extension.to_str())
                 .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"))
             {
-                let score = executable_score(&path, app_id, repo);
+                let score = executable_score(&path, app_id, repo, app_name);
                 let should_replace = match best.as_ref() {
                     Some((best_score, _)) => score > *best_score,
                     None => true,
@@ -2692,8 +2756,13 @@ fn find_best_web_launch_path(
     Ok(best.map(|(_, path)| path))
 }
 
-fn find_best_launch_path(root: &Path, app_id: &str, repo: &str) -> Result<Option<PathBuf>, String> {
-    if let Some(executable_path) = find_best_executable(root, app_id, repo)? {
+fn find_best_launch_path(
+    root: &Path,
+    app_id: &str,
+    repo: &str,
+    app_name: &str,
+) -> Result<Option<PathBuf>, String> {
+    if let Some(executable_path) = find_best_executable(root, app_id, repo, app_name)? {
         return Ok(Some(executable_path));
     }
     if let Some(lively_path) = find_lively_launch_path(root)? {
@@ -3955,7 +4024,12 @@ async fn download_release(
         {
             Some(target_path.clone())
         }
-        PackagePreference::Portable => find_best_launch_path(&target_dir, &apps[index].id, &repo)?,
+        PackagePreference::Portable => find_best_launch_path(
+            &target_dir,
+            &apps[index].id,
+            &repo,
+            &apps[index].name,
+        )?,
         PackagePreference::Installer => None,
     };
     let package_path = if is_wallpaper_package {
