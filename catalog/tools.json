@@ -1,6 +1,6 @@
 {
-  "catalogVersion": 22,
-  "updatedAt": "2026-08-01",
+  "catalogVersion": 23,
+  "updatedAt": "2026-08-18",
   "tools": [
     {
       "id": "asset-vault",
@@ -78,7 +78,7 @@
     {
       "id": "markrush",
       "name": "MarkRush",
-      "repo": "MarkRush",
+      "repo": "mark-rush",
       "description": "Fast local Markdown viewer/editor built for huge files and folders.",
       "accent": "#e05d7b",
       "icon": "MR",
