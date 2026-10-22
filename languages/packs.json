@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "packVersion": "26.10.21",
+  "baseUrl": "https://nekolegends.com/res/nekoLegendsControlCenter/languages/",
+  "sourceFontsDir": "D:\\NekoLegendsProjectZero\\ProjectZero\\Assets\\Content\\Fonts\\Source",
+  "packs": [
+    {
+      "id": "ja",
+      "name": "Japanese",
+      "nativeName": "日本語",
+      "script": "Japanese (Kana + Kanji)",
+      "rtl": false,
+      "complexShaping": false,
+      "fonts": [
+        {
+          "source": "NotoSansJP-VariableFont_wght.ttf",
+          "output": "NotoSansJP-wght400-700.ttf",
+          "family": "Noto Sans JP",
+          "axes": { "wght": [400, 400, 700] }
+        }
+      ]
+    },
+    {
+      "id": "zh-Hans",
+      "name": "Chinese (Simplified)",
+      "nativeName": "简体中文",
+      "script": "Simplified Han",
+      "rtl": false,
+      "complexShaping": false,
+      "fonts": [
+        {
+          "source": "NotoSansSC-VariableFont_wght.ttf",
+          "output": "NotoSansSC-wght400-700.ttf",
+          "family": "Noto Sans SC",
+          "axes": { "wght": [400, 400, 700] }
+        }
+      ]
+    },
+    {
+      "id": "ko",
+      "name": "Korean",
+      "nativeName": "한국어",
+      "script": "Hangul",
+      "rtl": false,
+      "complexShaping": false,
+      "fonts": [
+        {
+          "source": "NotoSansKR-VariableFont_wght.ttf",
+          "output": "NotoSansKR-wght400-700.ttf",
+          "family": "Noto Sans KR",
+          "axes": { "wght": [400, 400, 700] }
+        }
+      ]
+    },
+    {
+      "id": "ru",
+      "name": "Russian",
+      "nativeName": "Русский",
+      "script": "Cyrillic",
+      "rtl": false,
+      "complexShaping": false,
+      "fonts": [
+        {
+          "source": "NotoSansRU-VariableFont_wdth.ttf",
+          "output": "NotoSans-Cyrillic-wght400-700.ttf",
+          "family": "Noto Sans",
+          "axes": { "wght": [400, 400, 700], "wdth": 100 }
+        }
+      ]
+    },
+    {
+      "id": "th",
+      "name": "Thai",
+      "nativeName": "ไทย",
+      "script": "Thai",
+      "rtl": false,
+      "complexShaping": true,
+      "fonts": [
+        {
+          "source": "NotoSansThai-VariableFont_wdth,wght.ttf",
+          "output": "NotoSansThai-wght400-700.ttf",
+          "family": "Noto Sans Thai",
+          "axes": { "wght": [400, 400, 700], "wdth": 100 }
+        }
+      ]
+    },
+    {
+      "id": "ar",
+      "name": "Arabic",
+      "nativeName": "العربية",
+      "script": "Arabic",
+      "rtl": true,
+      "complexShaping": true,
+      "fonts": [
+        {
+          "source": "Changa-Medium.ttf",
+          "output": "Changa-Medium.ttf",
+          "family": "Changa"
+        }
+      ]
+    }
+  ]
+}

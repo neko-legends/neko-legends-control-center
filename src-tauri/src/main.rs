@@ -1,5 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod languages;
+
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -39,7 +41,7 @@ const AGENT_API_REGISTRY_FILE: &str = "agent-api-registry.json";
 const CAPABILITY_PROVIDER_CATALOG_FILE: &str = "capability-provider-catalog.v1.json";
 const CAPABILITY_PROVIDER_SCHEMA_VERSION: &str = "1.0";
 const MAX_INSTALLED_APP_VERSIONS: usize = 2;
-const RELEASE_SCAN_BATCH_SIZE: usize = 3;
+const RELEASE_SCAN_BATCH_SIZE: usize = 2;
 const RELEASE_SCAN_BATCH_DELAY_MS: u64 = 750;
 const RELEASE_SCAN_BATCH_SPREAD_MS: u64 = 100;
 
@@ -595,7 +597,7 @@ fn default_apps() -> Vec<LauncherApp> {
         app("image-to-splat", "ImageToSplat", "ImageToSplat", "Local TripoSplat workflow for turning a single image into Gaussian splat and point-cloud 3D exports.", "#55c7f7", "IS", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
         app("splatscape", "SplatScape", "SplatScape", "Portable FPS-style explorer for 3D Gaussian splat scenes with WASD and mouse-look navigation.", "#7adfbb", "SS", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
         app("painterly-clouds-3d", "Painterly Clouds 3D", "painterly-clouds-3d", "Painterly Three.js cloud scene for stylized skyboxes, wallpapers, and motion art.", "#7fb7ff", "PC", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
-        app("markrush", "MarkRush", "MarkRush", "Fast local Markdown viewer/editor built for huge files and folders.", "#e05d7b", "MR", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
+        app("markrush", "MarkRush", "mark-rush", "Fast local Markdown viewer/editor built for huge files and folders.", "#e05d7b", "MR", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("opensplit", "OpenSplit", "open-split", "Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.", "#4fb6d8", "OS", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("seamless-image-edit", "Seamless Image Edit", "SeamlessImageEdit", "Local image tiling and seamless texture prep for game art workflows.", "#d889ff", "SI", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("sprite-atlas-packer", "Sprite Atlas Packer", "sprite-atlas-packer", "Turn loose sprite frames into deterministic TexturePacker-compatible PNG/WebP atlases.", "#39a7ff", "SA", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
@@ -3878,6 +3880,16 @@ async fn scan_releases(app: AppHandle) -> Result<Vec<LauncherApp>, String> {
         release_jobs.push((index + 1, index, launcher_app.repo.clone()));
     }
 
+    // Check apps with no history first, then the least recently checked apps.
+    // The original catalog position is retained only as a stable tie-breaker.
+    release_jobs.sort_by_key(|(_, index, _)| {
+        let checked_at = apps[*index].release_checked_at.as_deref().unwrap_or_default();
+        (apps[*index].release_checked_at.is_some(), checked_at.to_string(), *index)
+    });
+    for (position, job) in release_jobs.iter_mut().enumerate() {
+        job.0 = position + 1;
+    }
+
     let total = release_jobs.len();
     for (batch_index, batch) in release_jobs.chunks(RELEASE_SCAN_BATCH_SIZE).enumerate() {
         if batch_index > 0 {
@@ -4128,6 +4140,11 @@ fn main() {
             process_agent_control_commands,
             scan_releases,
             download_release,
+            languages::get_language_packs,
+            languages::refresh_language_packs,
+            languages::install_language_pack,
+            languages::remove_language_pack,
+            languages::open_languages_folder,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Neko Legends Control Center");

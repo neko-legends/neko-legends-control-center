@@ -10,6 +10,7 @@ import {
   FolderOpen,
   GripVertical,
   Info,
+  Languages,
   Loader2,
   Pencil,
   Play,
@@ -139,6 +140,41 @@ type AgentApiDashboard = {
   nextAvailablePort: number
 }
 
+type LanguagePackInfo = {
+  id: string
+  name: string
+  nativeName: string
+  script: string
+  version: string | null
+  sizeBytes: number
+  rtl: boolean
+  complexShaping: boolean
+  available: boolean
+  installed: boolean
+  installedVersion: string | null
+  updateAvailable: boolean
+}
+
+type LanguagePacksState = {
+  packs: LanguagePackInfo[]
+  languagesDir: string
+  manifestSource: string
+  manifestUpdatedAt: string | null
+}
+
+type LanguagePackProgress = {
+  id: string
+  receivedBytes: number
+  totalBytes: number
+  done: boolean
+}
+
+function formatBytes(bytes: number): string {
+  if (!bytes) return ''
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`
+}
+
 type ReleaseScanProgress = {
   current: number
   total: number
@@ -185,7 +221,7 @@ const fallbackState: ControlCenterState = {
     app('image-to-splat', 'ImageToSplat', 'ImageToSplat', 'Local TripoSplat workflow for turning a single image into Gaussian splat and point-cloud 3D exports.', '#55c7f7', 'IS', 'Under Development', null, 'comingSoon'),
     app('splatscape', 'SplatScape', 'SplatScape', 'Portable FPS-style explorer for 3D Gaussian splat scenes with WASD and mouse-look navigation.', '#7adfbb', 'SS', 'Under Development', null, 'comingSoon'),
     app('painterly-clouds-3d', 'Painterly Clouds 3D', 'painterly-clouds-3d', 'Painterly Three.js cloud scene for stylized skyboxes, wallpapers, and motion art.', '#7fb7ff', 'PC', 'Under Development', null, 'comingSoon'),
-    app('markrush', 'MarkRush', 'MarkRush', 'Fast local Markdown viewer/editor built for huge files and folders.', '#e05d7b', 'MR', releasedToolsCategory),
+    app('markrush', 'MarkRush', 'mark-rush', 'Fast local Markdown viewer/editor built for huge files and folders.', '#e05d7b', 'MR', releasedToolsCategory),
     app('opensplit', 'OpenSplit', 'open-split', 'Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.', '#4fb6d8', 'OS', releasedToolsCategory),
     app('seamless-image-edit', 'Seamless Image Edit', 'SeamlessImageEdit', 'Local image tiling and seamless texture prep for game art workflows.', '#d889ff', 'SI', releasedToolsCategory),
     app('sprite-atlas-packer', 'Sprite Atlas Packer', 'sprite-atlas-packer', 'Turn loose sprite frames into deterministic TexturePacker-compatible PNG/WebP atlases.', '#39a7ff', 'SA', releasedToolsCategory),
@@ -590,6 +626,10 @@ export default function App() {
   const [scanProgress, setScanProgress] = useState<ReleaseScanProgress | null>(null)
   const [newReleaseIds, setNewReleaseIds] = useState<string[]>([])
   const [collapsedCategories, setCollapsedCategories] = useState<string[]>(loadCollapsedCategories)
+  const [languagePacks, setLanguagePacks] = useState<LanguagePacksState | null>(null)
+  const [languageProgress, setLanguageProgress] = useState<Record<string, LanguagePackProgress>>({})
+  const [languageBusyIds, setLanguageBusyIds] = useState<string[]>([])
+  const languageCatalogCheckedRef = useRef(false)
   const draggedItemRef = useRef<DragItem | null>(null)
   const pointerDragRef = useRef<PointerDrag | null>(null)
   const dragListenersRef = useRef<DragListeners | null>(null)
@@ -625,6 +665,7 @@ export default function App() {
     [contextMenu, state.apps],
   )
   const agentApiConflictCount = agentApiDashboard?.conflicts.length ?? 0
+  const installedLanguageCount = languagePacks?.packs.filter((pack) => pack.installed).length ?? 0
   const selectedAppUpdateAvailable = selectedApp ? isAppDownloaded(selectedApp) && versionStatus(selectedApp) === 'update' : false
   const selectedPreviousVersion = selectedApp ? previousInstalledVersion(selectedApp) : null
 
@@ -653,7 +694,7 @@ export default function App() {
   }
 
   function canLaunchSelectedVersion(appInfo: LauncherApp): boolean {
-    return Boolean(selectedLaunchPath(appInfo, selectedVersionFor(appInfo)))
+    return Boolean(selectedLaunchPath(appInfo, selectedVersionFor(appInfo)) || appArtifactPath(appInfo))
   }
 
   function isAppRunning(appInfo: LauncherApp): boolean {
@@ -685,9 +726,43 @@ export default function App() {
 
   useEffect(() => {
     void loadState()
-    void checkControlCenterUpdate(false)
     void refreshAgentApiDashboard()
   }, [])
+
+  useEffect(() => {
+    if (!isTauriRuntime()) return
+
+    let cancelled = false
+    let unlisten: (() => void) | null = null
+    void listen<LanguagePackProgress>('language-pack-progress', (event) => {
+      if (cancelled) return
+      const progress = event.payload
+      setLanguageProgress((current) => {
+        if (progress.done) {
+          const { [progress.id]: _finished, ...rest } = current
+          return rest
+        }
+        return { ...current, [progress.id]: progress }
+      })
+    }).then((cleanup) => {
+      if (cancelled) {
+        cleanup()
+      } else {
+        unlisten = cleanup
+      }
+    }).catch(() => undefined)
+
+    return () => {
+      cancelled = true
+      unlisten?.()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!settingsOpen || !isTauriRuntime()) return
+    void loadLanguagePacks(!languageCatalogCheckedRef.current && state.settings.useRemoteCatalog)
+    languageCatalogCheckedRef.current = true
+  }, [settingsOpen])
 
   useEffect(() => {
     if (!isTauriRuntime()) return
@@ -792,17 +867,30 @@ export default function App() {
       }
       const nextVisibleApps = nextState.apps.filter((candidate) => candidate.visible)
       setSelectedId((current) => nextVisibleApps.some((candidate) => candidate.id === current) ? current : nextVisibleApps[0]?.id ?? nextState.apps[0]?.id ?? '')
+      setNotice('Ready')
       const bootScanStartedAt = Date.now()
       if (nextState.apps.some((appInfo) => needsBootReleaseScan(appInfo, bootScanStartedAt))) {
-        setNotice('Refreshing release data in staggered batches...')
-        const apps = await call<LauncherApp[]>('scan_releases')
-        rememberNewReleases(nextState.apps, apps)
-        setState((current) => ({ ...current, apps }))
-        setScanProgress(null)
+        // Startup checks are intentionally detached: installed apps stay usable
+        // while the oldest release metadata is refreshed in the background.
+        void runBootReleaseScan(nextState.apps)
+      } else {
+        void checkControlCenterUpdate(false)
       }
-      setNotice('Ready')
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  async function runBootReleaseScan(previousApps: LauncherApp[]) {
+    try {
+      const apps = await call<LauncherApp[]>('scan_releases')
+      rememberNewReleases(previousApps, apps)
+      setState((current) => ({ ...current, apps }))
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error))
+    } finally {
+      setScanProgress(null)
+      void checkControlCenterUpdate(false)
     }
   }
 
@@ -814,6 +902,55 @@ export default function App() {
       setAgentApiPortEdits(
         Object.fromEntries(dashboard.apps.map((entry) => [entry.appId, String(entry.port)])),
       )
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  async function loadLanguagePacks(checkRemote: boolean) {
+    if (!isTauriRuntime()) return
+    try {
+      setLanguagePacks(await call<LanguagePacksState>('get_language_packs'))
+      if (checkRemote) {
+        setLanguagePacks(await call<LanguagePacksState>('refresh_language_packs'))
+      }
+    } catch (error) {
+      // The bundled list still works offline; only surface errors from explicit checks.
+      if (!checkRemote) setNotice(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  async function checkLanguageCatalog() {
+    if (!isTauriRuntime()) return
+    try {
+      setLanguagePacks(await call<LanguagePacksState>('refresh_language_packs'))
+      setNotice('Language list updated')
+    } catch (error) {
+      setNotice(`Could not check for language packs: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  async function runLanguagePackAction(pack: LanguagePackInfo, action: 'install' | 'remove') {
+    if (!isTauriRuntime() || languageBusyIds.includes(pack.id)) return
+    setLanguageBusyIds((current) => [...current, pack.id])
+    const verb = action === 'install' ? (pack.installed ? 'Updating' : 'Downloading') : 'Removing'
+    setNotice(`${verb} ${pack.name} language pack`)
+    try {
+      const command = action === 'install' ? 'install_language_pack' : 'remove_language_pack'
+      setLanguagePacks(await call<LanguagePacksState>(command, { request: { id: pack.id } }))
+      setNotice(action === 'install'
+        ? `${pack.name} is ready. Apps pick it up next time they start or regain focus.`
+        : `${pack.name} language pack removed`)
+    } catch (error) {
+      setNotice(`${pack.name}: ${error instanceof Error ? error.message : String(error)}`)
+    } finally {
+      setLanguageBusyIds((current) => current.filter((id) => id !== pack.id))
+    }
+  }
+
+  async function openLanguagesFolder() {
+    try {
+      await call('open_languages_folder')
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error))
     }
@@ -924,8 +1061,11 @@ export default function App() {
   }
 
   async function launchApp(appInfo: LauncherApp) {
-    const version = selectedVersionFor(appInfo)
-    if (!selectedLaunchPath(appInfo, version)) {
+    const selectedVersion = selectedVersionFor(appInfo)
+    const version = selectedLaunchPath(appInfo, selectedVersion)
+      ? selectedVersion
+      : appInfo.installedVersion
+    if (!selectedLaunchPath(appInfo, version) && !appArtifactPath(appInfo)) {
       setNotice(version ? `${appInfo.name} ${version} is not downloaded yet` : `${appInfo.name} is not downloaded yet`)
       return
     }
@@ -1805,6 +1945,17 @@ export default function App() {
           <button className="icon-button" type="button" onClick={() => setSettingsOpen((open) => !open)} title="Theme settings">
             <Settings2 size={17} />
           </button>
+          <button
+            className="icon-button"
+            type="button"
+            onClick={() => {
+              setSettingsOpen(true)
+              window.setTimeout(() => document.getElementById('language-packs')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60)
+            }}
+            title="Languages for all Neko Legends apps"
+          >
+            <Languages size={17} />
+          </button>
           <button className="scan-button" type="button" onClick={scanForUpdates} disabled={busy} title="Scan GitHub releases">
             {busy ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
             Scan
@@ -1936,6 +2087,75 @@ export default function App() {
                         <button type="button" onClick={() => void assignNextAgentApiPort(entry.appId)} title={`Use ${agentApiDashboard?.nextAvailablePort ?? 'next free port'}`}>
                           Next
                         </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="language-panel" id="language-packs" aria-label="Language packs">
+              <div className="agent-api-heading">
+                <strong>Languages</strong>
+                <span>{installedLanguageCount} installed · shared by all apps</span>
+                <button type="button" onClick={() => void checkLanguageCatalog()} title="Check for new language packs">
+                  <RefreshCw size={13} />
+                </button>
+                <button type="button" onClick={() => void openLanguagesFolder()} title={languagePacks?.languagesDir ?? 'Open languages folder'}>
+                  <FolderOpen size={13} />
+                </button>
+              </div>
+              <div className="language-list">
+                <div className="language-row">
+                  <div className="language-name">
+                    <strong>English</strong>
+                    <span>Built into every app</span>
+                  </div>
+                  <span className="language-size" />
+                  <div className="language-actions">
+                    <span className="language-badge">Built in</span>
+                  </div>
+                </div>
+                {(languagePacks?.packs ?? []).map((pack) => {
+                  const progress = languageProgress[pack.id]
+                  const working = languageBusyIds.includes(pack.id)
+                  const percent = progress && progress.totalBytes > 0 ? Math.floor((progress.receivedBytes / progress.totalBytes) * 100) : null
+                  const note = pack.rtl
+                    ? 'Right-to-left: best in web-based apps'
+                    : pack.complexShaping
+                      ? 'Some marks may sit loosely in native apps'
+                      : null
+                  return (
+                    <div className={classNames('language-row', pack.installed && 'installed')} key={pack.id}>
+                      <div className="language-name">
+                        <strong lang={pack.id} dir={pack.rtl ? 'rtl' : undefined}>{pack.nativeName}</strong>
+                        <span title={note ?? pack.script}>{note ? `${pack.name} · ${note}` : pack.name}</span>
+                      </div>
+                      <span className="language-size">{formatBytes(pack.sizeBytes)}</span>
+                      <div className="language-actions">
+                        {working ? (
+                          <span className="language-badge working">
+                            <Loader2 className="spin" size={12} />
+                            {percent !== null ? `${percent}%` : 'Working'}
+                          </span>
+                        ) : pack.installed ? (
+                          <>
+                            {pack.updateAvailable ? (
+                              <button type="button" onClick={() => void runLanguagePackAction(pack, 'install')} title={`Update to ${pack.version ?? 'latest'}`}>
+                                Update
+                              </button>
+                            ) : (
+                              <span className="language-badge ready" title={pack.installedVersion ?? undefined}>Installed</span>
+                            )}
+                            <button type="button" onClick={() => void runLanguagePackAction(pack, 'remove')} title={`Remove ${pack.name}`}>
+                              Remove
+                            </button>
+                          </>
+                        ) : (
+                          <button type="button" onClick={() => void runLanguagePackAction(pack, 'install')} disabled={!pack.available} title={`Download ${pack.name} for all apps`}>
+                            <Download size={12} />
+                            Get
+                          </button>
+                        )}
                       </div>
                     </div>
                   )

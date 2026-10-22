@@ -43,7 +43,7 @@ Catalog snapshot: `catalog/tools.json` version 19, updated 2026-07-10.
 | BatchLapse | [neko-legends/BatchLapse](https://github.com/neko-legends/BatchLapse) | Batch video timelapse exporter for MP4, WebM, and GitHub-friendly GIFs. |
 | Cutscene Converter | [neko-legends/CutsceneConverter](https://github.com/neko-legends/CutsceneConverter) | Prepare AI-generated videos for game engines with batch conversion, trimming, scaling, and combining. |
 | DepthMap AI | [neko-legends/depth-map-generator](https://github.com/neko-legends/depth-map-generator) | Batch depth-map and WebP generator for local AI image workflows. |
-| MarkRush | [neko-legends/MarkRush](https://github.com/neko-legends/MarkRush) | Fast local Markdown viewer/editor built for huge files and folders. |
+| MarkRush | [neko-legends/mark-rush](https://github.com/neko-legends/mark-rush) | Fast local Markdown viewer/editor built for huge files and folders. |
 | Multi-Angle Edit | [neko-legends/multi-angle-edit](https://github.com/neko-legends/multi-angle-edit) | Re-render an existing image from a new camera angle with Qwen-Image-Edit plus the Multiple-Angles LoRA. |
 | OpenSplit | [neko-legends/open-split](https://github.com/neko-legends/open-split) | Multi-pane terminal harness for AI coding agents, shells, and SSH sessions. |
 | Seamless Image Edit | [neko-legends/SeamlessImageEdit](https://github.com/neko-legends/SeamlessImageEdit) | Create seamless and tileable texture outputs from images or folders with seam repair, flattening, and 2x2 preview. |
@@ -95,6 +95,12 @@ Catalog status values:
 - `comingSoon`: The tool can be shown in the launcher, but downloads are disabled and stale release metadata is ignored.
 
 Recommended catalog convention: put `comingSoon` tools in the `Under Development` category. If a scan finds a public release for an under-development app, the Control Center promotes it to `available` and moves it into the released tools group automatically. Reset Layout is only for restoring the default visual layout.
+
+## Language Packs
+
+Apps ship English only. The Control Center downloads fonts for other languages once into a shared folder (`%APPDATA%\NekoLegends\languages` on Windows) that every Neko Legends app reads, so no app has to bundle its own copies. Open them from the 文A button in the top bar or Settings → Languages.
+
+Packs: Japanese, Chinese (Simplified), Korean, Russian/Cyrillic, Thai, and Arabic, built from OFL fonts and hosted next to `tools.json`. See [languages/README.md](languages/README.md) for the folder layout apps read, and how to build and publish packs.
 
 ## Status Labels
 

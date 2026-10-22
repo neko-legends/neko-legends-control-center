@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "packVersion": "26.10.21",
+  "updatedAt": "2026-10-21",
+  "baseUrl": "https://nekolegends.com/res/nekoLegendsControlCenter/languages/",
+  "packs": [
+    {
+      "id": "ja",
+      "name": "Japanese",
+      "nativeName": "日本語",
+      "script": "Japanese (Kana + Kanji)",
+      "version": "26.10.21",
+      "rtl": false,
+      "complexShaping": false,
+      "license": "OFL-1.1",
+      "sizeBytes": 8998273,
+      "files": [
+        {
+          "path": "ja/NotoSansJP-wght400-700.ttf",
+          "kind": "font",
+          "family": "Noto Sans JP",
+          "size": 8993736,
+          "sha256": "25a57e9991bb60feddf3cd4cda3c6f4d3c5d4e9386373d3f7cdca3158f67104c"
+        },
+        {
+          "path": "ja/OFL.txt",
+          "kind": "license",
+          "size": 4537,
+          "sha256": "0d80cd75096c0c638a0ec8a90ef164cb79cb919287ba2523bb58182b4ffee551"
+        }
+      ]
+    },
+    {
+      "id": "zh-Hans",
+      "name": "Chinese (Simplified)",
+      "nativeName": "简体中文",
+      "script": "Simplified Han",
+      "version": "26.10.21",
+      "rtl": false,
+      "complexShaping": false,
+      "license": "OFL-1.1",
+      "sizeBytes": 17592273,
+      "files": [
+        {
+          "path": "zh-Hans/NotoSansSC-wght400-700.ttf",
+          "kind": "font",
+          "family": "Noto Sans SC",
+          "size": 17587736,
+          "sha256": "680f555bddbea68bd1f3e845d216e1e417dcdd3abf8aa45263d8bb85593a5480"
+        },
+        {
+          "path": "zh-Hans/OFL.txt",
+          "kind": "license",
+          "size": 4537,
+          "sha256": "0d80cd75096c0c638a0ec8a90ef164cb79cb919287ba2523bb58182b4ffee551"
+        }
+      ]
+    },
+    {
+      "id": "ko",
+      "name": "Korean",
+      "nativeName": "한국어",
+      "script": "Hangul",
+      "version": "26.10.21",
+      "rtl": false,
+      "complexShaping": false,
+      "license": "OFL-1.1",
+      "sizeBytes": 10234289,
+      "files": [
+        {
+          "path": "ko/NotoSansKR-wght400-700.ttf",
+          "kind": "font",
+          "family": "Noto Sans KR",
+          "size": 10229752,
+          "sha256": "9b36de3e5f332df60446ac91d2e89710b15316b6113397e521460d22b48adc84"
+        },
+        {
+          "path": "ko/OFL.txt",
+          "kind": "license",
+          "size": 4537,
+          "sha256": "0d80cd75096c0c638a0ec8a90ef164cb79cb919287ba2523bb58182b4ffee551"
+        }
+      ]
+    },
+    {
+      "id": "ru",
+      "name": "Russian",
+      "nativeName": "Русский",
+      "script": "Cyrillic",
+      "version": "26.10.21",
+      "rtl": false,
+      "complexShaping": false,
+      "license": "OFL-1.1",
+      "sizeBytes": 1005706,
+      "files": [
+        {
+          "path": "ru/NotoSans-Cyrillic-wght400-700.ttf",
+          "kind": "font",
+          "family": "Noto Sans",
+          "size": 1001156,
+          "sha256": "1da9386398331ccc0b0d20b3c957b0257277b06dc5e71f1502b92ac08cd8e313"
+        },
+        {
+          "path": "ru/OFL.txt",
+          "kind": "license",
+          "size": 4550,
+          "sha256": "0df743252a6e2802f62f0d0c74b5cb001830b6080944c7e9a472937ab28c8263"
+        }
+      ]
+    },
+    {
+      "id": "th",
+      "name": "Thai",
+      "nativeName": "ไทย",
+      "script": "Thai",
+      "version": "26.10.21",
+      "rtl": false,
+      "complexShaping": true,
+      "license": "OFL-1.1",
+      "sizeBytes": 78534,
+      "files": [
+        {
+          "path": "th/NotoSansThai-wght400-700.ttf",
+          "kind": "font",
+          "family": "Noto Sans Thai",
+          "size": 74000,
+          "sha256": "9c324574ddb20a3d67c86895cd9fb23ba9f69d952efcb560d9a2dde1e5af7b68"
+        },
+        {
+          "path": "th/OFL.txt",
+          "kind": "license",
+          "size": 4534,
+          "sha256": "cab6dc6bc2eb5761f6207f8eb1e341bc419db715a311aa872bece0ca52c5919a"
+        }
+      ]
+    },
+    {
+      "id": "ar",
+      "name": "Arabic",
+      "nativeName": "العربية",
+      "script": "Arabic",
+      "version": "26.10.21",
+      "rtl": true,
+      "complexShaping": true,
+      "license": "OFL-1.1",
+      "sizeBytes": 105707,
+      "files": [
+        {
+          "path": "ar/Changa-Medium.ttf",
+          "kind": "font",
+          "family": "Changa",
+          "size": 101172,
+          "sha256": "f0dd3db9300e6ece97d7d76834709372e8e29e8c825900d57734b5883817d3d9"
+        },
+        {
+          "path": "ar/OFL.txt",
+          "kind": "license",
+          "size": 4535,
+          "sha256": "8f478d5aed43b2fb0ab88869236e33c2577c02b4f1fc46ed62596b9d263264dd"
+        }
+      ]
+    }
+  ]
+}

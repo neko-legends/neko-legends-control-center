@@ -19,7 +19,7 @@ $apps = @(
   @{ Code = 'CC'; Name = 'CutsceneConverter'; Root = Join-Path $suiteRoot 'CutsceneConverter'; Tauri = 'src-tauri\icons' },
   @{ Code = 'DM'; Name = 'depth-map-generator'; Root = Join-Path $suiteRoot 'depth-map-generator'; Tauri = 'src-tauri\icons' },
   @{ Code = 'A3'; Name = 'ImageToASCII3D'; Root = Join-Path $suiteRoot 'ImageToASCII3D'; Tauri = 'src-tauri\icons'; WebIcon = 'apps\web\public\icon.png' },
-  @{ Code = 'MR'; Name = 'MarkRush'; Root = Join-Path $suiteRoot 'MarkRush'; MarkRush = $true },
+  @{ Code = 'MR'; Name = 'MarkRush'; Root = Join-Path $suiteRoot 'mark-rush'; MarkRush = $true },
   @{ Code = 'OS'; Name = 'OpenSplit'; Root = Join-Path $suiteRoot 'open-split'; Tauri = 'src-tauri\icons' },
   @{ Code = 'SI'; Name = 'SeamlessImageEdit'; Root = Join-Path $suiteRoot 'SeamlessImageEdit'; Tauri = 'src-tauri\icons' },
   @{ Code = 'VM'; Name = 'VeniceMediaLocal'; Root = Join-Path $suiteRoot 'venice-media-local'; Tauri = 'src-tauri\icons' },
