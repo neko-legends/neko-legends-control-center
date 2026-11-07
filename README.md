@@ -34,7 +34,7 @@ There are three ways to launch an installed app:
 
 ## Current Tools
 
-Catalog snapshot: `catalog/tools.json` version 19, updated 2026-07-10.
+Catalog snapshot: `catalog/tools.json` version 24, updated 2026-10-24.
 
 ### Released Tools
 
@@ -69,6 +69,7 @@ These entries are visible in the Control Center, but downloads stay disabled unt
 | Palette Forge | [neko-legends/PaletteForge](https://github.com/neko-legends/PaletteForge) | Extract project palettes, remap assets, audit palette drift, and export engine-agnostic LUT/index textures. |
 | ImageToSplat | [neko-legends/ImageToSplat](https://github.com/neko-legends/ImageToSplat) | Local TripoSplat workflow for turning a single image into Gaussian splat and point-cloud 3D exports. |
 | SplatScape | [neko-legends/SplatScape](https://github.com/neko-legends/SplatScape) | Portable FPS-style explorer for 3D Gaussian splat scenes with WASD and mouse-look navigation. |
+| Neko Capture | [neko-legends/neko-capture](https://github.com/neko-legends/neko-capture) | Record any URL at an exact pixel size while you interact with it, or capture an app window, straight to MP4. |
 | Painterly Clouds 3D | [neko-legends/painterly-clouds-3d](https://github.com/neko-legends/painterly-clouds-3d) | Painterly Three.js cloud scene for stylized skyboxes, wallpapers, and motion art. |
 
 ## Dynamic Tool Catalog
