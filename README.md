@@ -164,6 +164,7 @@ Every released tool now ships a Linux build next to its Windows one, built in CI
 | App | First Linux release | Linux asset |
 | --- | --- | --- |
 | BatchLapse | v26.11.7 | AppImage |
+| Cutscene Converter | v26.11.9 | AppImage (uses the system `ffmpeg`) |
 | DepthMap AI | v26.11.7 | AppImage (sets up its own Python 3.12 + CUDA 12.8 runtime with `uv`) |
 | Image to 3D | v26.11.7 | AppImage (Python 3.11 + CUDA 12.8 runtime via `uv`; builds its texture modules on first setup) |
 | MarkRush | v26.11.7 | `markrush-linux-x86_64.zip` (native binary) |
