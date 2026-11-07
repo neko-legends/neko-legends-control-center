@@ -2128,8 +2128,65 @@ fn mark_executable(_path: &Path) -> Result<(), String> {
 /// Builds the command that starts a native app. AppImages need FUSE 2 to
 /// mount themselves; when it is missing (common on Arch/Omarchy) ask the
 /// AppImage runtime to extract and run instead.
+/// Opens a file, folder or URL with the desktop's default handler.
+fn open_external(target: impl AsRef<std::ffi::OsStr>) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    if std::env::var_os("APPDIR").is_some() {
+        // Inside an AppImage, run xdg-open with the AppImage's bundled-library
+        // environment removed so the browser/file manager uses system libraries.
+        let mut command = Command::new("xdg-open");
+        command
+            .arg(target.as_ref())
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        strip_appimage_environment(&mut command);
+        return command.spawn().map(|_| ()).map_err(|err| err.to_string());
+    }
+    open::that(target.as_ref()).map_err(|err| err.to_string())
+}
+
+/// When the Control Center itself runs as an AppImage, its runtime points
+/// LD_LIBRARY_PATH, PYTHONHOME, GTK/GIO module paths, XDG_DATA_DIRS etc. into
+/// its own mount and forces GDK_BACKEND=x11. Child processes must not inherit
+/// that: drop every variable that points into $APPDIR (keeping the other
+/// entries of path lists) plus the AppImage bookkeeping variables.
+fn strip_appimage_environment(command: &mut Command) {
+    let Some(appdir) = std::env::var_os("APPDIR") else {
+        return;
+    };
+    let appdir = appdir.to_string_lossy().trim_end_matches('/').to_string();
+    if appdir.is_empty() {
+        return;
+    }
+    for (key, value) in std::env::vars_os() {
+        let value = value.to_string_lossy().to_string();
+        if !value.contains(&appdir) {
+            continue;
+        }
+        let kept: Vec<&str> = value
+            .split(':')
+            .filter(|entry| !entry.is_empty() && !entry.starts_with(&appdir))
+            .collect();
+        if kept.is_empty() {
+            command.env_remove(&key);
+        } else {
+            command.env(&key, kept.join(":"));
+        }
+    }
+    for key in ["APPDIR", "APPIMAGE", "ARGV0", "OWD", "PYTHONDONTWRITEBYTECODE"] {
+        command.env_remove(key);
+    }
+    if std::env::var("GDK_BACKEND").as_deref() == Ok("x11") {
+        command.env_remove("GDK_BACKEND");
+    }
+    // The AppImage GTK hook pins GTK_THEME for itself; let children use the desktop's.
+    command.env_remove("GTK_THEME");
+}
+
 fn native_app_command(path: &Path) -> Command {
     let mut command = Command::new(path);
+    strip_appimage_environment(&mut command);
     if cfg!(target_os = "linux")
         && path
             .extension()
@@ -3384,7 +3441,7 @@ fn launch_app(app: AppHandle, request: LaunchRequest) -> Result<LaunchResult, St
     let relaunched = if is_launchable_executable_path(&path) {
         launch_or_relaunch_executable(&request.app_id, &path)?
     } else if is_web_launch_path(&path) {
-        open::that(path).map_err(|err| err.to_string())?;
+        open_external(&path)?;
         false
     } else {
         return Err("Configured launch file is not supported".to_string());
@@ -3425,6 +3482,7 @@ fn headless_agent_args(app_id: &str, port: u16) -> Result<Vec<String>, String> {
         ]),
         "asset-vault"
         | "batchlapse"
+        | "seamless-image-edit"
         | "cutscene-converter"
         | "depth-map-ai-generator"
         | "image-to-3d"
@@ -3489,7 +3547,7 @@ fn open_release_url(app: AppHandle, request: LaunchRequest) -> Result<(), String
                 GITHUB_OWNER, launcher_app.repo
             )
         });
-    open::that(url).map_err(|err| err.to_string())
+    open_external(&url)
 }
 
 #[tauri::command]
@@ -3500,7 +3558,7 @@ fn open_repository_url(app: AppHandle, request: LaunchRequest) -> Result<(), Str
         .find(|candidate| candidate.id == request.app_id)
         .ok_or_else(|| "App was not found".to_string())?;
     let url = format!("https://github.com/{}/{}", GITHUB_OWNER, launcher_app.repo);
-    open::that(url).map_err(|err| err.to_string())
+    open_external(&url)
 }
 
 #[tauri::command]
@@ -3515,7 +3573,7 @@ fn open_demo_url(app: AppHandle, request: LaunchRequest) -> Result<(), String> {
         .as_deref()
         .filter(|value| !value.trim().is_empty())
         .ok_or_else(|| "This app does not have a hosted demo.".to_string())?;
-    open::that(url).map_err(|err| err.to_string())
+    open_external(&url)
 }
 
 #[tauri::command]
@@ -3563,7 +3621,7 @@ fn open_control_center_release(update: ControlCenterUpdate) -> Result<(), String
                 GITHUB_OWNER, CONTROL_CENTER_REPO
             )
         });
-    open::that(url).map_err(|err| err.to_string())
+    open_external(&url)
 }
 
 fn ensure_update_target_writable(target_exe: &Path) -> Result<PathBuf, String> {
@@ -3683,8 +3741,6 @@ fn replace_running_appimage(app: &AppHandle, source: &Path) -> Result<(), String
     mark_executable(&staged)?;
     fs::rename(&staged, &target).map_err(|err| err.to_string())?;
     native_app_command(&target)
-        .env_remove("APPIMAGE")
-        .env_remove("APPDIR")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -3732,7 +3788,7 @@ fn ensure_linux_desktop_entry() {
         let _ = fs::create_dir_all(parent);
     }
     let entry = format!(
-        "[Desktop Entry]\nType=Application\nName=Neko Legends Control Center\nComment=Launcher and update hub for Neko Legends apps\n{exec_line}\nIcon=neko-legends-control-center\nTerminal=false\nCategories=Utility;Development;\nStartupWMClass=neko-legends-control-center\n"
+        "[Desktop Entry]\nType=Application\nName=Neko Legends Control Center\nComment=Launcher and update hub for Neko Legends apps\n{exec_line}\nIcon=neko-legends-control-center\nTerminal=false\nCategories=Utility;Development;\n"
     );
     let _ = fs::write(&desktop_path, entry);
 }
@@ -3872,7 +3928,7 @@ fn open_install_folder(app: AppHandle, request: LaunchRequest) -> Result<(), Str
         .unwrap_or(default_install_dir()?.join(&launcher_app.id));
 
     fs::create_dir_all(&folder).map_err(|err| err.to_string())?;
-    open::that(folder).map_err(|err| err.to_string())
+    open_external(&folder)
 }
 
 fn agent_control_root(app: &AppHandle) -> Result<PathBuf, String> {
