@@ -157,6 +157,25 @@ On Linux:
 
 Releases are built for both Windows and Linux by `.github/workflows/release.yml` when a `v*` tag is pushed.
 
+### Apps with Linux builds
+
+Every released tool now ships a Linux build next to its Windows one, built in CI on Ubuntu 22.04 and tested on Omarchy:
+
+| App | First Linux release | Linux asset |
+| --- | --- | --- |
+| BatchLapse | v26.11.7 | AppImage |
+| DepthMap AI | v26.11.7 | AppImage (sets up its own Python 3.12 + CUDA 12.8 runtime with `uv`) |
+| Image to 3D | v26.11.7 | AppImage (Python 3.11 + CUDA 12.8 runtime via `uv`; builds its texture modules on first setup) |
+| MarkRush | v26.11.7 | `markrush-linux-x86_64.zip` (native binary) |
+| Multi-Angle Edit | v26.11.7 | AppImage (Python runtime via `uv`) |
+| OpenSplit | v26.11.7 | AppImage |
+| Seamless Image Edit | v26.11.7 | AppImage |
+| Sprite Atlas Packer | v26.11.7 | AppImage |
+| Venice Media | v26.11.7 | AppImage |
+| ASCII 3D | v26.11.7 | AppImage |
+
+The AI tools need [`uv`](https://docs.astral.sh/uv/) on Linux (Omarchy includes it through mise; elsewhere `curl -LsSf https://astral.sh/uv/install.sh | sh`) because Omarchy's system Python (3.14) is newer than PyTorch and their model libraries support. PurplePlanet and StarGaze are web wallpapers: View Demo works everywhere, and their packages download on Linux too.
+
 ## Development
 
 Install dependencies:
