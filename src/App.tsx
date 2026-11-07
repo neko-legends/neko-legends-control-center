@@ -225,6 +225,7 @@ const fallbackState: ControlCenterState = {
     app('opensplit', 'OpenSplit', 'open-split', 'Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.', '#4fb6d8', 'OS', releasedToolsCategory),
     app('seamless-image-edit', 'Seamless Image Edit', 'SeamlessImageEdit', 'Local image tiling and seamless texture prep for game art workflows.', '#d889ff', 'SI', releasedToolsCategory),
     app('sprite-atlas-packer', 'Sprite Atlas Packer', 'sprite-atlas-packer', 'Turn loose sprite frames into deterministic TexturePacker-compatible PNG/WebP atlases.', '#39a7ff', 'SA', releasedToolsCategory),
+    app('neko-capture', 'Neko Capture', 'neko-capture', 'Record any URL at an exact pixel size while you interact with it, or capture an app window, straight to MP4.', '#f25f5c', 'NC', 'Under Development', null, 'comingSoon'),
     app('venice-media-local', 'Venice Media', 'venice-media-local', 'Local Venice API media workspace for images, video, music, voice, and cleanup.', '#34c6a3', 'VM', releasedToolsCategory),
     app('purpleplanet', 'PurplePlanet', 'PurplePlanet', 'Luminous Three.js planet motion art for live wallpapers and screensavers.', '#8c65df', 'PP', 'Fun Stuff', 'https://nekolegends.com/res/projects/purplePlanet/'),
     app('stargaze', 'StarGaze', 'StarGaze', 'Glittering Three.js starfield wallpaper and screensaver with tunable motion.', '#6b7cff', 'SG', 'Fun Stuff', 'https://nekolegends.com/res/projects/starGaze/'),
@@ -1154,11 +1155,17 @@ export default function App() {
       multiple: false,
       directory: false,
       defaultPath,
-      filters: [
-        { name: 'Launch files', extensions: ['exe', 'html', 'htm'] },
-        { name: 'Windows executable', extensions: ['exe'] },
-        { name: 'Web wallpaper', extensions: ['html', 'htm'] },
-      ],
+      filters: navigator.userAgent.includes('Windows')
+        ? [
+            { name: 'Launch files', extensions: ['exe', 'html', 'htm'] },
+            { name: 'Windows executable', extensions: ['exe'] },
+            { name: 'Web wallpaper', extensions: ['html', 'htm'] },
+          ]
+        : [
+            // Linux binaries are often extensionless, so keep an all-files option.
+            { name: 'Launch files', extensions: ['AppImage', 'appimage', 'html', 'htm'] },
+            { name: 'All files', extensions: ['*'] },
+          ],
     })
     if (typeof selected !== 'string') return
 

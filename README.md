@@ -133,6 +133,30 @@ npm run run:portable
 
 The `src-tauri\target-*` folders are temporary build output. The `release\portable` and `release\installer` folders are the packages to upload, and generated build output is intentionally ignored by Git.
 
+## Linux / Omarchy
+
+The Control Center runs natively on Linux (tested on Omarchy: Arch + Hyprland, Wayland, NVIDIA).
+
+**Install from a release:** download `Neko.Legends.Control.Center_<version>_amd64.AppImage` from the latest release, make it executable (`chmod +x`), and run it. On first run it adds itself to the app launcher (Super+Space on Omarchy), and it updates itself in place when a newer release is out.
+
+**Install from source** (also adds the launcher entry):
+
+```bash
+scripts/install-omarchy.sh             # build + install to ~/.local
+scripts/install-omarchy.sh --uninstall # remove it
+```
+
+This needs `webkit2gtk-4.1`, `gtk3`, and `libsoup3` (preinstalled on Omarchy) and Rust (`cargo` on PATH, or it uses `mise`'s `rust@stable`). Rerun it to update.
+
+On Linux:
+
+- Downloaded apps install to `~/.local/share/NekoLegends/apps`.
+- The Control Center downloads `.AppImage` release assets (or `.zip` assets with `linux` in the name). Windows `.exe`/`.msi` assets are ignored, so an app whose release has no Linux build reports that when you try to download it.
+- AppImages run without FUSE 2 by extracting on launch (`APPIMAGE_EXTRACT_AND_RUN=1`).
+- Apps launched from the Control Center inherit `WEBKIT_DISABLE_DMABUF_RENDERER=1`, which avoids the WebKitGTK "Error 71" crash on Wayland with NVIDIA.
+
+Releases are built for both Windows and Linux by `.github/workflows/release.yml` when a `v*` tag is pushed.
+
 ## Development
 
 Install dependencies:

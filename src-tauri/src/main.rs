@@ -35,7 +35,9 @@ const UNDER_DEVELOPMENT_CATEGORY: &str = "Under Development";
 const RELEASED_TOOLS_CATEGORY: &str = "Released Tools";
 const LEGACY_RELEASED_WORK_STUFF_CATEGORY: &str = "Released Work Stuff";
 const FUN_STUFF_CATEGORY: &str = "Fun Stuff";
+#[cfg_attr(not(windows), allow(dead_code))]
 const VENICE_MEDIA_LOCAL_ID: &str = "venice-media-local";
+#[cfg_attr(not(windows), allow(dead_code))]
 const VENICE_MEDIA_LOCAL_DISPLAY_NAME: &str = "Venice Media Local";
 const AGENT_API_REGISTRY_FILE: &str = "agent-api-registry.json";
 const CAPABILITY_PROVIDER_CATALOG_FILE: &str = "capability-provider-catalog.v1.json";
@@ -601,6 +603,7 @@ fn default_apps() -> Vec<LauncherApp> {
         app("opensplit", "OpenSplit", "open-split", "Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.", "#4fb6d8", "OS", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("seamless-image-edit", "Seamless Image Edit", "SeamlessImageEdit", "Local image tiling and seamless texture prep for game art workflows.", "#d889ff", "SI", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("sprite-atlas-packer", "Sprite Atlas Packer", "sprite-atlas-packer", "Turn loose sprite frames into deterministic TexturePacker-compatible PNG/WebP atlases.", "#39a7ff", "SA", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
+        app("neko-capture", "Neko Capture", "neko-capture", "Record any URL at an exact pixel size while you interact with it, or capture an app window, straight to MP4.", "#f25f5c", "NC", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
         app("venice-media-local", "Venice Media", "venice-media-local", "Local Venice API media workspace for images, video, music, voice, and cleanup.", "#34c6a3", "VM", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("purpleplanet", "PurplePlanet", "PurplePlanet", "Luminous Three.js planet motion art for live wallpapers and screensavers.", "#8c65df", "PP", "Fun Stuff", ToolStatus::Available, Some("https://nekolegends.com/res/projects/purplePlanet/")),
         app("stargaze", "StarGaze", "StarGaze", "Glittering Three.js starfield wallpaper and screensaver with tunable motion.", "#6b7cff", "SG", "Fun Stuff", ToolStatus::Available, Some("https://nekolegends.com/res/projects/starGaze/")),
@@ -2077,12 +2080,73 @@ fn expected_executable_names(launcher_app: &LauncherApp) -> Vec<String> {
     names
 }
 
-fn is_launchable_executable_path(path: &Path) -> bool {
-    if !path
-        .extension()
+/// File extension of a directly runnable app binary on this platform.
+#[cfg(windows)]
+const NATIVE_EXECUTABLE_EXTENSION: &str = "exe";
+#[cfg(not(windows))]
+const NATIVE_EXECUTABLE_EXTENSION: &str = "AppImage";
+
+fn has_native_executable_extension(path: &Path) -> bool {
+    path.extension()
         .and_then(|extension| extension.to_str())
-        .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"))
+        .is_some_and(|extension| extension.eq_ignore_ascii_case(NATIVE_EXECUTABLE_EXTENSION))
+}
+
+/// True for a file that can be started directly on this platform: an `.exe`
+/// on Windows; an `.AppImage`, or an extensionless file with an execute bit
+/// (e.g. a binary unpacked from a Linux zip), elsewhere.
+fn is_native_executable_file(path: &Path) -> bool {
+    if has_native_executable_extension(path) {
+        return true;
+    }
+    #[cfg(unix)]
     {
+        use std::os::unix::fs::PermissionsExt;
+        if path.extension().is_none() {
+            return fs::metadata(path)
+                .map(|meta| meta.is_file() && meta.permissions().mode() & 0o111 != 0)
+                .unwrap_or(false);
+        }
+    }
+    false
+}
+
+/// Downloaded AppImages arrive without an execute bit; add it.
+#[cfg(unix)]
+fn mark_executable(path: &Path) -> Result<(), String> {
+    use std::os::unix::fs::PermissionsExt;
+    let mut permissions = fs::metadata(path).map_err(|err| err.to_string())?.permissions();
+    permissions.set_mode(permissions.mode() | 0o755);
+    fs::set_permissions(path, permissions).map_err(|err| err.to_string())
+}
+
+#[cfg(not(unix))]
+fn mark_executable(_path: &Path) -> Result<(), String> {
+    Ok(())
+}
+
+/// Builds the command that starts a native app. AppImages need FUSE 2 to
+/// mount themselves; when it is missing (common on Arch/Omarchy) ask the
+/// AppImage runtime to extract and run instead.
+fn native_app_command(path: &Path) -> Command {
+    let mut command = Command::new(path);
+    if cfg!(target_os = "linux")
+        && path
+            .extension()
+            .and_then(|extension| extension.to_str())
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("appimage"))
+        && !Path::new("/usr/lib/libfuse.so.2").exists()
+    {
+        command.env("APPIMAGE_EXTRACT_AND_RUN", "1");
+    }
+    if let Some(parent) = path.parent() {
+        command.current_dir(parent);
+    }
+    command
+}
+
+fn is_launchable_executable_path(path: &Path) -> bool {
+    if !is_native_executable_file(path) {
         return false;
     }
     let name = path
@@ -2135,6 +2199,33 @@ fn command_path_from_registry_value(value: &str) -> Option<PathBuf> {
     }
 }
 
+/// Linux/macOS builds live in read-only system folders (e.g. /usr/bin), so
+/// downloaded apps go to the per-user data folder instead of beside the exe.
+#[cfg(not(windows))]
+fn default_install_dir() -> Result<PathBuf, String> {
+    let base = std::env::var_os("XDG_DATA_HOME")
+        .map(PathBuf::from)
+        .filter(|path| path.is_absolute())
+        .or_else(|| {
+            std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".local").join("share"))
+        })
+        .ok_or_else(|| "Unable to resolve user data folder.".to_string())?;
+    let apps_dir = base.join("NekoLegends").join("apps");
+    fs::create_dir_all(&apps_dir).map_err(|err| err.to_string())?;
+    Ok(apps_dir)
+}
+
+fn platform_label() -> &'static str {
+    if cfg!(windows) {
+        "Windows"
+    } else if cfg!(target_os = "macos") {
+        "macOS"
+    } else {
+        "Linux"
+    }
+}
+
+#[cfg(windows)]
 fn default_install_dir() -> Result<PathBuf, String> {
     let exe_path = std::env::current_exe().map_err(|err| err.to_string())?;
     let exe_dir = exe_path
@@ -2163,7 +2254,11 @@ fn safe_file_segment(value: &str) -> String {
 }
 
 fn stable_portable_exe_path(launcher_app: &LauncherApp, target_dir: &Path) -> PathBuf {
-    target_dir.join(format!("{}.exe", safe_file_segment(&launcher_app.repo)))
+    target_dir.join(format!(
+        "{}.{}",
+        safe_file_segment(&launcher_app.repo),
+        NATIVE_EXECUTABLE_EXTENSION
+    ))
 }
 
 fn move_portable_exe_to_stable_name(
@@ -2243,6 +2338,7 @@ fn is_installer_asset_name(name: &str) -> bool {
     name.ends_with(".msi") || name.contains("setup") || name.contains("installer")
 }
 
+#[cfg(windows)]
 fn is_portable_asset_name(name: &str) -> bool {
     name.ends_with(".zip")
         || name.contains("portable")
@@ -2250,7 +2346,62 @@ fn is_portable_asset_name(name: &str) -> bool {
         || (name.ends_with(".exe") && !is_installer_asset_name(name))
 }
 
-fn release_asset_score(asset: &GitHubReleaseAsset, package_preference: &PackagePreference) -> i32 {
+/// Linux: AppImages are the portable format; a zip is only accepted when its
+/// name says it is a Linux build. There is no installer format the launcher
+/// can drive here, so Installer preference finds nothing.
+#[cfg(not(windows))]
+fn release_asset_score(
+    asset: &GitHubReleaseAsset,
+    package_preference: &PackagePreference,
+    platform_neutral_zip: bool,
+) -> i32 {
+    let name = asset.name.to_ascii_lowercase();
+    let is_linux_named = name.contains("linux");
+    if name.ends_with(".sig")
+        || name.ends_with(".sha256")
+        || name.ends_with(".sha512")
+        || name.ends_with(".blockmap")
+        || name.ends_with(".exe")
+        || name.ends_with(".msi")
+        || name.ends_with(".dmg")
+        || name.contains("darwin")
+        || name.contains("macos")
+    {
+        return -100;
+    }
+    let mut score = match package_preference {
+        PackagePreference::Portable => {
+            if name.ends_with(".appimage") {
+                100
+            } else if name.ends_with(".zip") && is_linux_named {
+                60
+            } else if name.ends_with(".zip") && platform_neutral_zip && !name.contains("win") {
+                // Web wallpaper packages (HTML/JS) are the same on every OS.
+                30
+            } else {
+                return -100;
+            }
+        }
+        PackagePreference::Installer => return -100,
+    };
+    if is_linux_named {
+        score += 10;
+    }
+    if name.contains("x86_64") || name.contains("amd64") || name.contains("x64") {
+        score += 15;
+    }
+    if name.contains("aarch64") || name.contains("arm64") {
+        score -= 60;
+    }
+    score
+}
+
+#[cfg(windows)]
+fn release_asset_score(
+    asset: &GitHubReleaseAsset,
+    package_preference: &PackagePreference,
+    _platform_neutral_zip: bool,
+) -> i32 {
     let name = asset.name.to_ascii_lowercase();
     if name.ends_with(".blockmap")
         || name.ends_with(".sig")
@@ -2315,16 +2466,19 @@ fn release_asset_score(asset: &GitHubReleaseAsset, package_preference: &PackageP
     score
 }
 
+/// `platform_neutral_zip`: the app ships a web package (wallpaper/demo apps), so
+/// a plain .zip is usable on any OS.
 fn best_release_asset<'a>(
     release: &'a GitHubRelease,
     package_preference: &PackagePreference,
+    platform_neutral_zip: bool,
 ) -> Option<&'a GitHubReleaseAsset> {
     release
         .assets
         .iter()
         .filter(|asset| !asset.browser_download_url.trim().is_empty())
-        .max_by_key(|asset| release_asset_score(asset, package_preference))
-        .filter(|asset| release_asset_score(asset, package_preference) > 0)
+        .max_by_key(|asset| release_asset_score(asset, package_preference, platform_neutral_zip))
+        .filter(|asset| release_asset_score(asset, package_preference, platform_neutral_zip) > 0)
 }
 
 fn control_center_asset_score(asset: &GitHubReleaseAsset) -> i32 {
@@ -2332,7 +2486,7 @@ fn control_center_asset_score(asset: &GitHubReleaseAsset) -> i32 {
     if name.contains("updater") || name.contains("uninstall") {
         return -100;
     }
-    let base_score = release_asset_score(asset, &PackagePreference::Portable);
+    let base_score = release_asset_score(asset, &PackagePreference::Portable, false);
     if base_score <= 0 {
         return base_score;
     }
@@ -2570,11 +2724,7 @@ fn find_best_executable(
                 stack.push(path);
                 continue;
             }
-            if path
-                .extension()
-                .and_then(|extension| extension.to_str())
-                .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"))
-            {
+            if is_native_executable_file(&path) {
                 let score = executable_score(&path, app_id, repo, app_name);
                 let should_replace = match best.as_ref() {
                     Some((best_score, _)) => score > *best_score,
@@ -2890,6 +3040,11 @@ fn extract_zip(zip_path: &Path, target_dir: &Path) -> Result<(), String> {
 
         let mut output = fs::File::create(&output_path).map_err(|err| err.to_string())?;
         io::copy(&mut entry, &mut output).map_err(|err| err.to_string())?;
+        #[cfg(unix)]
+        if let Some(mode) = entry.unix_mode() {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = fs::set_permissions(&output_path, fs::Permissions::from_mode(mode & 0o777));
+        }
     }
 
     Ok(())
@@ -3099,7 +3254,11 @@ fn save_executable(
         return Err("Launch path does not exist".to_string());
     }
     if !is_launch_path(&path) {
-        return Err("Choose an .exe, .html, or .htm launch file.".to_string());
+        return Err(if cfg!(windows) {
+            "Choose an .exe, .html, or .htm launch file."
+        } else {
+            "Choose an .AppImage, executable, .html, or .htm launch file."
+        }.to_string());
     }
     let version = manual_version_label(target, &path);
     add_installed_version(target, version.clone(), Some(&path), None);
@@ -3193,7 +3352,9 @@ fn launch_or_relaunch_executable(app_id: &str, path: &Path) -> Result<bool, Stri
         running.remove(app_id);
     }
 
-    let child = Command::new(path).spawn().map_err(|err| err.to_string())?;
+    let child = native_app_command(path)
+        .spawn()
+        .map_err(|err| err.to_string())?;
     running.insert(app_id.to_string(), child);
     Ok(relaunched)
 }
@@ -3303,7 +3464,7 @@ fn launch_agent_api_headless(app: AppHandle, request: LaunchRequest) -> Result<(
         .find(|entry| entry.app_id == request.app_id)
         .ok_or_else(|| "This app is not in the Agent API registry.".to_string())?;
     let args = headless_agent_args(&request.app_id, entry.port)?;
-    Command::new(path)
+    native_app_command(&path)
         .args(args)
         .spawn()
         .map(|_| ())
@@ -3498,12 +3659,90 @@ try {
 "#
 }
 
+/// Path of the AppImage file this process was started from (set by the
+/// AppImage runtime), if any.
+fn running_appimage_path() -> Option<PathBuf> {
+    if !cfg!(target_os = "linux") {
+        return None;
+    }
+    std::env::var_os("APPIMAGE")
+        .map(PathBuf::from)
+        .filter(|path| path.is_file())
+}
+
+/// Linux: swap the running AppImage for the downloaded one and relaunch. The
+/// running process keeps its mounted/extracted copy, so replacing the file by
+/// rename is safe.
+fn replace_running_appimage(app: &AppHandle, source: &Path) -> Result<(), String> {
+    let target = running_appimage_path()
+        .ok_or_else(|| "The Control Center is not running from an AppImage.".to_string())?;
+    let staged = target.with_extension("AppImage.new");
+    fs::copy(source, &staged).map_err(|err| {
+        format!("Could not write the update next to {}: {err}", target.display())
+    })?;
+    mark_executable(&staged)?;
+    fs::rename(&staged, &target).map_err(|err| err.to_string())?;
+    native_app_command(&target)
+        .env_remove("APPIMAGE")
+        .env_remove("APPDIR")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|err| err.to_string())?;
+    app.exit(0);
+    Ok(())
+}
+
+/// When started from an AppImage, add (or refresh) an app launcher entry so it
+/// shows up in desktop launchers such as Omarchy's. An entry written by
+/// scripts/install-omarchy.sh (Exec is not an AppImage) is left alone.
+#[cfg(target_os = "linux")]
+fn ensure_linux_desktop_entry() {
+    let Some(appimage) = running_appimage_path() else {
+        return;
+    };
+    let Some(data_home) = std::env::var_os("XDG_DATA_HOME")
+        .map(PathBuf::from)
+        .filter(|path| path.is_absolute())
+        .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".local/share")))
+    else {
+        return;
+    };
+    let desktop_path = data_home
+        .join("applications")
+        .join("neko-legends-control-center.desktop");
+    let exec_line = format!("Exec=\"{}\"", appimage.display());
+    if let Ok(existing) = fs::read_to_string(&desktop_path) {
+        let exec_is_appimage = existing
+            .lines()
+            .any(|line| line.starts_with("Exec=") && line.to_ascii_lowercase().contains(".appimage"));
+        if !exec_is_appimage || existing.lines().any(|line| line == exec_line) {
+            return;
+        }
+    }
+    let icon_path = data_home
+        .join("icons/hicolor/256x256/apps")
+        .join("neko-legends-control-center.png");
+    if let Some(parent) = icon_path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    let _ = fs::write(&icon_path, include_bytes!("../icons/256x256.png"));
+    if let Some(parent) = desktop_path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    let entry = format!(
+        "[Desktop Entry]\nType=Application\nName=Neko Legends Control Center\nComment=Launcher and update hub for Neko Legends apps\n{exec_line}\nIcon=neko-legends-control-center\nTerminal=false\nCategories=Utility;Development;\nStartupWMClass=neko-legends-control-center\n"
+    );
+    let _ = fs::write(&desktop_path, entry);
+}
+
 fn schedule_control_center_update(app: &AppHandle, source_exe: &Path) -> Result<(), String> {
     if !cfg!(windows) {
-        return Err(
-            "Automatic Control Center updates are currently supported on Windows portable builds."
-                .to_string(),
-        );
+        if !source_exe.exists() {
+            return Err("Downloaded Control Center update file is missing.".to_string());
+        }
+        return replace_running_appimage(app, source_exe);
     }
 
     if !source_exe.exists() {
@@ -3548,9 +3787,9 @@ fn schedule_control_center_update(app: &AppHandle, source_exe: &Path) -> Result<
 
 #[tauri::command]
 async fn install_control_center_update(app: AppHandle) -> Result<(), String> {
-    if !cfg!(windows) {
+    if !cfg!(windows) && running_appimage_path().is_none() {
         return Err(
-            "Automatic Control Center updates are currently supported on Windows portable builds."
+            "Automatic updates work for the Control Center AppImage. For a source install, rerun scripts/install-omarchy.sh."
                 .to_string(),
         );
     }
@@ -3565,8 +3804,10 @@ async fn install_control_center_update(app: AppHandle) -> Result<(), String> {
         return Err("Control Center is already up to date.".to_string());
     }
     let asset = best_control_center_asset(release).ok_or_else(|| {
-        "The latest Control Center release does not have a portable Windows download yet."
-            .to_string()
+        format!(
+            "The latest Control Center release does not have a portable {} download yet.",
+            platform_label()
+        )
     })?;
     let staging_dir = app_data_dir(&app)?
         .join("self-updates")
@@ -3600,13 +3841,16 @@ async fn install_control_center_update(app: AppHandle) -> Result<(), String> {
     } else if is_zip_asset {
         extract_zip(&asset_path, &staging_dir)?;
         find_control_center_update_executable(&staging_dir)?.ok_or_else(|| {
-            "The Control Center update package did not include a launchable Windows app."
-                .to_string()
+            format!(
+                "The Control Center update package did not include a launchable {} app.",
+                platform_label()
+            )
         })?
     } else {
-        return Err(
-            "The latest Control Center download is not a portable Windows app.".to_string(),
-        );
+        return Err(format!(
+            "The latest Control Center download is not a portable {} app.",
+            platform_label()
+        ));
     };
 
     schedule_control_center_update(&app, &source_exe)
@@ -3963,13 +4207,13 @@ async fn download_release(
         .or_else(|| releases.first())
         .ok_or_else(|| "No public releases found yet.".to_string())?;
     let asset =
-        best_release_asset(release, &package_preference).ok_or_else(
+        best_release_asset(release, &package_preference, apps[index].demo_url.is_some()).ok_or_else(
             || match package_preference {
                 PackagePreference::Portable => {
-                    "Selected release does not have a portable Windows download asset.".to_string()
+                    format!("Selected release does not have a portable {} download asset.", platform_label())
                 }
                 PackagePreference::Installer => {
-                    "Selected release does not have a Windows installer asset.".to_string()
+                    format!("Selected release does not have a {} installer asset.", platform_label())
                 }
             },
         )?;
@@ -3991,6 +4235,9 @@ async fn download_release(
     }
     let bytes = response.bytes().await.map_err(|err| err.to_string())?;
     fs::write(&target_path, &bytes).map_err(|err| err.to_string())?;
+    if has_native_executable_extension(&target_path) {
+        mark_executable(&target_path)?;
+    }
 
     let is_zip_asset = target_path
         .extension()
@@ -4012,10 +4259,7 @@ async fn download_release(
         .unwrap_or_default()
         .to_ascii_lowercase();
     if matches!(package_preference, PackagePreference::Portable)
-        && target_path
-            .extension()
-            .and_then(|extension| extension.to_str())
-            .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"))
+        && has_native_executable_extension(&target_path)
         && !is_installer_asset_name(&downloaded_name)
     {
         let stable_path = stable_portable_exe_path(&apps[index], &target_dir);
@@ -4028,10 +4272,7 @@ async fn download_release(
     }
     let executable_path = match package_preference {
         PackagePreference::Portable
-            if target_path
-                .extension()
-                .and_then(|extension| extension.to_str())
-                .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"))
+            if has_native_executable_extension(&target_path)
                 && !is_installer_asset_name(&downloaded_name) =>
         {
             Some(target_path.clone())
@@ -4096,9 +4337,19 @@ async fn download_release(
 }
 
 fn main() {
+    // WebKitGTK's DMA-BUF renderer crashes on Wayland with NVIDIA
+    // ("Error 71 (Protocol error) dispatching to Wayland display"). Turn it off
+    // unless the user has chosen a value themselves.
+    #[cfg(target_os = "linux")]
+    if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            #[cfg(target_os = "linux")]
+            ensure_linux_desktop_entry();
             let app_handle = app.handle().clone();
             let apps = read_apps(&app_handle);
             write_capability_provider_catalog_best_effort(&app_handle, &apps);
@@ -4153,6 +4404,69 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(not(windows))]
+    fn release_with(names: &[&str]) -> GitHubRelease {
+        GitHubRelease {
+            tag_name: "v1".to_string(),
+            html_url: String::new(),
+            body: None,
+            assets: names
+                .iter()
+                .map(|name| GitHubReleaseAsset {
+                    name: name.to_string(),
+                    browser_download_url: format!("https://example.invalid/{name}"),
+                })
+                .collect(),
+        }
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn linux_prefers_appimage_and_ignores_windows_assets() {
+        let release = release_with(&[
+            "batchlapse.exe",
+            "BatchLapse_26.11.7_x64-setup.exe",
+            "BatchLapse_26.11.7_amd64.AppImage",
+        ]);
+        let asset = best_release_asset(&release, &PackagePreference::Portable, false).unwrap();
+        assert_eq!(asset.name, "BatchLapse_26.11.7_amd64.AppImage");
+
+        let windows_only = release_with(&["batchlapse.exe", "BatchLapse_26.7.12_x64-setup.exe"]);
+        assert!(best_release_asset(&windows_only, &PackagePreference::Portable, false).is_none());
+        assert!(best_release_asset(&windows_only, &PackagePreference::Installer, false).is_none());
+
+        let linux_zip = release_with(&["markrush.exe", "markrush-linux-x86_64.zip"]);
+        let asset = best_release_asset(&linux_zip, &PackagePreference::Portable, false).unwrap();
+        assert_eq!(asset.name, "markrush-linux-x86_64.zip");
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn linux_accepts_plain_zip_only_for_web_packages() {
+        let release = release_with(&["StarGaze.zip"]);
+        assert!(best_release_asset(&release, &PackagePreference::Portable, false).is_none());
+        let asset = best_release_asset(&release, &PackagePreference::Portable, true).unwrap();
+        assert_eq!(asset.name, "StarGaze.zip");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn linux_executables_are_detected() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = test_dir("linux-exec");
+        let appimage = root.join("Tool_1.0_amd64.AppImage");
+        let binary = root.join("tool");
+        let data = root.join("notes");
+        for path in [&appimage, &binary, &data] {
+            fs::write(path, b"x").unwrap();
+        }
+        fs::set_permissions(&binary, fs::Permissions::from_mode(0o755)).unwrap();
+        assert!(is_native_executable_file(&appimage));
+        assert!(is_native_executable_file(&binary));
+        assert!(!is_native_executable_file(&data));
+        let _ = fs::remove_dir_all(&root);
+    }
 
     fn test_dir(name: &str) -> PathBuf {
         let path = std::env::temp_dir().join(format!(
