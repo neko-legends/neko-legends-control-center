@@ -1244,7 +1244,7 @@ export default function App() {
     setBusy(true)
     let successCount = 0
     for (const appInfo of targets) {
-      if (await downloadRelease(appInfo, appInfo.latestVersion ?? appInfo.releaseOptions[0]?.tagName ?? null, false)) {
+      if (await downloadRelease(appInfo, null, false)) {
         successCount += 1
       }
     }

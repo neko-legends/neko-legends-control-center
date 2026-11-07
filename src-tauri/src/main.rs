@@ -2640,6 +2640,59 @@ fn is_newer_version(latest: &str, current: &str) -> bool {
     false
 }
 
+/// Token for GitHub API calls, if the user has one: `GITHUB_TOKEN`/`GH_TOKEN`, or
+/// the GitHub CLI's login (`gh auth token`). Signed-in calls get 5,000 requests
+/// an hour instead of 60 per IP address, which a few scans can use up.
+fn github_token() -> Option<String> {
+    static TOKEN: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+    TOKEN
+        .get_or_init(|| {
+            for key in ["GITHUB_TOKEN", "GH_TOKEN"] {
+                if let Ok(value) = std::env::var(key) {
+                    if !value.trim().is_empty() {
+                        return Some(value.trim().to_string());
+                    }
+                }
+            }
+            let mut command = std::process::Command::new("gh");
+            command.args(["auth", "token"]);
+            #[cfg(target_os = "windows")]
+            {
+                use std::os::windows::process::CommandExt;
+                command.creation_flags(0x08000000);
+            }
+            let output = command.output().ok()?;
+            let token = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            (output.status.success() && !token.is_empty()).then_some(token)
+        })
+        .clone()
+}
+
+/// Last successful release list per repo, used when GitHub refuses API calls
+/// (rate limit, offline). Asset downloads themselves are not rate limited.
+fn release_cache_path(repo: &str) -> Option<PathBuf> {
+    let base = if cfg!(target_os = "windows") {
+        std::env::var_os("LOCALAPPDATA").map(PathBuf::from)
+    } else {
+        std::env::var_os("XDG_CACHE_HOME")
+            .map(PathBuf::from)
+            .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".cache")))
+    }?;
+    Some(
+        base.join("NekoLegends")
+            .join("control-center")
+            .join("releases")
+            .join(format!("{}.json", safe_file_segment(repo))),
+    )
+}
+
+fn read_cached_releases(repo: &str) -> Option<Vec<GitHubRelease>> {
+    let bytes = fs::read(release_cache_path(repo)?).ok()?;
+    serde_json::from_slice::<Vec<GitHubRelease>>(&bytes)
+        .ok()
+        .filter(|releases| !releases.is_empty())
+}
+
 async fn fetch_releases(
     client: &reqwest::Client,
     repo: &str,
@@ -2648,27 +2701,60 @@ async fn fetch_releases(
         "https://api.github.com/repos/{}/{}/releases?per_page=20",
         GITHUB_OWNER, repo
     );
-    let response = client
-        .get(url)
-        .send()
-        .await
-        .map_err(|err| err.to_string())?;
-    if response.status().as_u16() == 404 {
+    let mut request = client.get(url);
+    if let Some(token) = github_token() {
+        request = request.bearer_auth(token);
+    }
+    let response = match request.send().await {
+        Ok(response) => response,
+        Err(error) => {
+            return read_cached_releases(repo).ok_or_else(|| error.to_string());
+        }
+    };
+    let status = response.status();
+    if status.as_u16() == 404 {
         return Err("No public releases found yet.".to_string());
     }
-    if !response.status().is_success() {
-        return Err(format!("GitHub returned {}.", response.status()));
+    if !status.is_success() {
+        let rate_limited = matches!(status.as_u16(), 403 | 429)
+            && response
+                .headers()
+                .get("x-ratelimit-remaining")
+                .and_then(|value| value.to_str().ok())
+                == Some("0");
+        if let Some(cached) = read_cached_releases(repo) {
+            return Ok(cached);
+        }
+        if rate_limited {
+            let minutes = response
+                .headers()
+                .get("x-ratelimit-reset")
+                .and_then(|value| value.to_str().ok())
+                .and_then(|value| value.parse::<i64>().ok())
+                .map(|reset| ((reset - Utc::now().timestamp()).max(0) + 59) / 60);
+            let wait = minutes
+                .map(|minutes| format!("Try again in about {minutes} min"))
+                .unwrap_or_else(|| "Try again later".to_string());
+            return Err(format!(
+                "GitHub's hourly limit for release checks was reached. {wait}, or sign in with the GitHub CLI (`gh auth login`) to raise the limit."
+            ));
+        }
+        return Err(format!("GitHub returned {status}."));
     }
 
-    let releases = response
-        .json::<Vec<GitHubRelease>>()
-        .await
+    let bytes = response.bytes().await.map_err(|err| err.to_string())?;
+    let releases = serde_json::from_slice::<Vec<GitHubRelease>>(&bytes)
         .map_err(|err| err.to_string())?;
     if releases.is_empty() {
-        Err("No public releases found yet.".to_string())
-    } else {
-        Ok(releases)
+        return Err("No public releases found yet.".to_string());
     }
+    if let Some(path) = release_cache_path(repo) {
+        if let Some(parent) = path.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        let _ = fs::write(path, &bytes);
+    }
+    Ok(releases)
 }
 
 async fn fetch_release_batch(
@@ -4259,6 +4345,14 @@ async fn download_release(
             releases
                 .iter()
                 .find(|candidate| candidate.tag_name == version)
+        })
+        // No specific version: the newest release that has a download for
+        // this platform (skips e.g. an older Windows-only pre-release).
+        .or_else(|| {
+            releases.iter().find(|candidate| {
+                best_release_asset(candidate, &package_preference, apps[index].demo_url.is_some())
+                    .is_some()
+            })
         })
         .or_else(|| releases.first())
         .ok_or_else(|| "No public releases found yet.".to_string())?;
