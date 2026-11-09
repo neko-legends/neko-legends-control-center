@@ -34,7 +34,7 @@ There are three ways to launch an installed app:
 
 ## Current Tools
 
-Catalog snapshot: `catalog/tools.json` version 25, updated 2026-11-09.
+Catalog snapshot: `catalog/tools.json` version 26, updated 2026-11-09.
 
 ### Released Tools
 
@@ -46,6 +46,7 @@ Catalog snapshot: `catalog/tools.json` version 25, updated 2026-11-09.
 | ImageToSplat | [neko-legends/ImageToSplat](https://github.com/neko-legends/ImageToSplat) | Turn a single image into a 3D Gaussian splat (.spz / .ply) and a textured, game-ready mesh (.glb). |
 | MarkRush | [neko-legends/mark-rush](https://github.com/neko-legends/mark-rush) | Fast local Markdown viewer/editor built for huge files and folders. |
 | Multi-Angle Edit | [neko-legends/multi-angle-edit](https://github.com/neko-legends/multi-angle-edit) | Re-render an existing image from a new camera angle with Qwen-Image-Edit plus the Multiple-Angles LoRA. |
+| Neko Capture | [neko-legends/neko-capture](https://github.com/neko-legends/neko-capture) | Record any URL at an exact pixel size while you interact with it, or capture an app window, straight to MP4. |
 | OpenSplit | [neko-legends/open-split](https://github.com/neko-legends/open-split) | Multi-pane terminal harness for AI coding agents, shells, and SSH sessions. |
 | Seamless Image Edit | [neko-legends/SeamlessImageEdit](https://github.com/neko-legends/SeamlessImageEdit) | Create seamless and tileable texture outputs from images or folders with seam repair, flattening, and 2x2 preview. |
 | Sprite Atlas Packer | [neko-legends/sprite-atlas-packer](https://github.com/neko-legends/sprite-atlas-packer) | Turn loose sprite frames into deterministic TexturePacker-compatible PNG/WebP atlases. |
@@ -69,7 +70,6 @@ These entries are visible in the Control Center, but downloads stay disabled unt
 | Image to 3D | [neko-legends/ImageTo3D](https://github.com/neko-legends/ImageTo3D) | Local image-to-3D workflow for mesh, texture, and 3D asset generation. |
 | Palette Forge | [neko-legends/PaletteForge](https://github.com/neko-legends/PaletteForge) | Extract project palettes, remap assets, audit palette drift, and export engine-agnostic LUT/index textures. |
 | SplatScape | [neko-legends/SplatScape](https://github.com/neko-legends/SplatScape) | Portable FPS-style explorer for 3D Gaussian splat scenes with WASD and mouse-look navigation. |
-| Neko Capture | [neko-legends/neko-capture](https://github.com/neko-legends/neko-capture) | Record any URL at an exact pixel size while you interact with it, or capture an app window, straight to MP4. |
 | Painterly Clouds 3D | [neko-legends/painterly-clouds-3d](https://github.com/neko-legends/painterly-clouds-3d) | Painterly Three.js cloud scene for stylized skyboxes, wallpapers, and motion art. |
 
 ## Dynamic Tool Catalog
@@ -176,6 +176,7 @@ Every released tool now ships a Linux build next to its Windows one, built in CI
 | Venice Media | v26.11.7 | AppImage |
 | ASCII 3D | v26.11.7 | AppImage |
 | ImageToSplat | v26.11.9 | AppImage, Linux only for now (Python 3.12 runtime via `uv`; the mesh export needs the CUDA toolkit) |
+| Neko Capture | v26.11.9 | AppImage, Linux only for now (Electron; nothing else to install) |
 
 The AI tools need [`uv`](https://docs.astral.sh/uv/) on Linux (Omarchy includes it through mise; elsewhere `curl -LsSf https://astral.sh/uv/install.sh | sh`) because Omarchy's system Python (3.14) is newer than PyTorch and their model libraries support. PurplePlanet and StarGaze are web wallpapers: View Demo works everywhere, and their packages download on Linux too.
 

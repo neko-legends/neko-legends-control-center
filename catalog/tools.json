@@ -1,5 +1,5 @@
 {
-  "catalogVersion": 25,
+  "catalogVersion": 26,
   "updatedAt": "2026-11-09",
   "tools": [
     {
@@ -190,9 +190,9 @@
       "description": "Record any URL at an exact pixel size while you interact with it, or capture an app window, straight to MP4.",
       "accent": "#f25f5c",
       "icon": "NC",
-      "category": "Under Development",
+      "category": "Released Tools",
       "packagePreference": "portable",
-      "status": "comingSoon",
+      "status": "available",
       "visible": true
     },
     {
