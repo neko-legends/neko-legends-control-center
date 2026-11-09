@@ -1012,6 +1012,29 @@ export default function App() {
     }
   }
 
+  async function scanAppRelease(appInfo: LauncherApp) {
+    if (!isTauriRuntime()) {
+      setNotice('Browser preview. Release scans run in the desktop runtime.')
+      return
+    }
+    setBusy(true)
+    setNotice(`Checking ${appInfo.name} releases...`)
+    setScanProgress({ current: 1, total: 1, appId: appInfo.id, appName: appInfo.name, status: 'checking' })
+    try {
+      const previousApps = appsRef.current
+      const apps = await call<LauncherApp[]>('scan_app_release', { appId: appInfo.id })
+      rememberNewReleases(previousApps, apps)
+      setState((current) => ({ ...current, apps }))
+      const scanned = apps.find((candidate) => candidate.id === appInfo.id)
+      setNotice(scanned?.latestVersion ? `${appInfo.name}: latest is ${scanned.latestVersion}` : `${appInfo.name}: ${scanned?.releaseNotes ?? 'no releases found'}`)
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error))
+    } finally {
+      setScanProgress(null)
+      setBusy(false)
+    }
+  }
+
   async function checkControlCenterUpdate(showNotice: boolean): Promise<ControlCenterUpdate | null> {
     if (!isTauriRuntime()) return null
     if (showNotice) setNotice('Checking Control Center release...')
@@ -2067,7 +2090,11 @@ export default function App() {
                           min="1"
                           max="65535"
                           value={portValue}
-                          onChange={(event) => setAgentApiPortEdits((current) => ({ ...current, [entry.appId]: event.currentTarget.value }))}
+                          onChange={(event) => {
+                            // Read before the updater runs: React may call it after the event is gone.
+                            const value = event.currentTarget.value
+                            setAgentApiPortEdits((current) => ({ ...current, [entry.appId]: value }))
+                          }}
                           onKeyDown={(event) => {
                             if (event.key === 'Enter') {
                               void saveAgentApiPort(entry.appId, portValue)
@@ -2417,7 +2444,13 @@ export default function App() {
                 <select
                   value={selectedVersionFor(selectedApp) ?? ''}
                   disabled={busy || (selectedApp.releaseOptions.length === 0 && selectedApp.installedVersions.length === 0)}
-                  onChange={(event) => setSelectedReleaseTags((current) => ({ ...current, [selectedApp.id]: event.currentTarget.value }))}
+                  onChange={(event) => {
+                    // Read before the updater runs: React may call it after the event is gone
+                    // (currentTarget is then null and the whole window went black).
+                    const tag = event.currentTarget.value
+                    const appId = selectedApp.id
+                    setSelectedReleaseTags((current) => ({ ...current, [appId]: tag }))
+                  }}
                 >
                   {selectedApp.releaseOptions.length === 0 && <option value="">Scan releases</option>}
                   {selectedApp.releaseOptions.map((release) => (
@@ -2531,6 +2564,16 @@ export default function App() {
                 <ExternalLink size={17} />
                 Release
               </button>
+              <button
+                className="secondary-action"
+                type="button"
+                onClick={() => void scanAppRelease(selectedApp)}
+                disabled={busy}
+                title={`Check GitHub for new ${selectedApp.name} releases`}
+              >
+                <RefreshCw size={17} />
+                Scan
+              </button>
             </div>
 
             <div className="release-note">
@@ -2554,6 +2597,17 @@ export default function App() {
           onContextMenu={(event) => event.preventDefault()}
         >
           <div className="context-menu-title">{contextMenuApp.name}</div>
+          <button
+            type="button"
+            onClick={() => {
+              closeContextMenu()
+              void scanAppRelease(contextMenuApp)
+            }}
+            disabled={busy}
+          >
+            <RefreshCw size={15} />
+            Scan for updates
+          </button>
           {contextMenuApp.demoUrl && (
             <button
               type="button"

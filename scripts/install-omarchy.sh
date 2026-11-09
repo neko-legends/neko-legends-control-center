@@ -58,7 +58,7 @@ for pkg in @esbuild/linux-x64 @rollup/rollup-linux-x64-gnu @tauri-apps/cli-linux
 done
 "${RUN[@]}" npx tauri build --no-bundle
 
-install -Dm755 "src-tauri/target/release/${APP_ID}" "${BIN_DIR}/${APP_ID}"
+install -Dm755 "${CARGO_TARGET_DIR:-src-tauri/target}/release/${APP_ID}" "${BIN_DIR}/${APP_ID}"
 
 mkdir -p "$(dirname "$ICON_FILE")"
 if command -v magick >/dev/null 2>&1; then

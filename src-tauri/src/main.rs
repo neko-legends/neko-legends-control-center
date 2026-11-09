@@ -4293,26 +4293,58 @@ async fn scan_releases(app: AppHandle) -> Result<Vec<LauncherApp>, String> {
             let Some(launcher_app) = apps.get_mut(index) else {
                 continue;
             };
-            match result {
-                Ok(releases) => {
-                    if let Some(release) = releases.first() {
-                        apply_release_metadata(launcher_app, release, &checked_at);
-                    }
-                    launcher_app.release_options = release_options(&releases);
-                    promote_released_app(launcher_app);
-                }
-                Err(error) if error == "No public releases found yet." => {
-                    apply_no_public_release(launcher_app, &checked_at);
-                }
-                Err(error) => {
-                    launcher_app.release_notes = Some(error);
-                    launcher_app.release_checked_at = Some(checked_at.clone());
-                }
-            }
+            apply_release_scan_result(launcher_app, result, &checked_at);
             emit_release_scan_progress(&app, position, total, launcher_app, "checked");
         }
     }
 
+    save_apps(&app, &apps)?;
+    Ok(apps)
+}
+
+fn apply_release_scan_result(
+    launcher_app: &mut LauncherApp,
+    result: Result<Vec<GitHubRelease>, String>,
+    checked_at: &str,
+) {
+    match result {
+        Ok(releases) => {
+            if let Some(release) = releases.first() {
+                apply_release_metadata(launcher_app, release, checked_at);
+            }
+            launcher_app.release_options = release_options(&releases);
+            promote_released_app(launcher_app);
+        }
+        Err(error) if error == "No public releases found yet." => {
+            apply_no_public_release(launcher_app, checked_at);
+        }
+        Err(error) => {
+            launcher_app.release_notes = Some(error);
+            launcher_app.release_checked_at = Some(checked_at.to_string());
+        }
+    }
+}
+
+/// Check GitHub releases for one app only (the per-app "Scan" button) — the
+/// full scan walks every app in staggered batches and gets slow as the
+/// catalog grows.
+#[tauri::command]
+async fn scan_app_release(app: AppHandle, app_id: String) -> Result<Vec<LauncherApp>, String> {
+    let client = github_client()?;
+    let repo = read_apps(&app)
+        .into_iter()
+        .find(|candidate| candidate.id == app_id)
+        .map(|candidate| candidate.repo)
+        .ok_or_else(|| "App was not found".to_string())?;
+    let result = fetch_releases(&client, &repo).await;
+
+    // Re-read after the network wait so changes made meanwhile are kept.
+    let mut apps = read_apps(&app);
+    let launcher_app = apps
+        .iter_mut()
+        .find(|candidate| candidate.id == app_id)
+        .ok_or_else(|| "App was not found".to_string())?;
+    apply_release_scan_result(launcher_app, result, &Utc::now().to_rfc3339());
     save_apps(&app, &apps)?;
     Ok(apps)
 }
@@ -4555,6 +4587,7 @@ fn main() {
             save_agent_api_port,
             process_agent_control_commands,
             scan_releases,
+            scan_app_release,
             download_release,
             languages::get_language_packs,
             languages::refresh_language_packs,

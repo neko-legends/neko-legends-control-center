@@ -1687,3 +1687,40 @@ button {
 .language-badge.working {
   color: var(--accent);
 }
+
+.crash-screen {
+  display: grid;
+  gap: 12px;
+  max-width: 920px;
+  margin: 48px auto;
+  padding: 24px;
+  color: #f5e6d3;
+  font-family: system-ui, sans-serif;
+}
+
+.crash-screen h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.crash-screen pre {
+  max-height: 50vh;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid #5a3a1a;
+  border-radius: 6px;
+  background: #120a04;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.crash-screen button {
+  justify-self: start;
+  padding: 8px 18px;
+  border: 1px solid #ff8a1f;
+  border-radius: 6px;
+  background: #ff8a1f;
+  color: #1a0d02;
+  font-weight: 700;
+  cursor: pointer;
+}
