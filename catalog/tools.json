@@ -1,6 +1,6 @@
 {
-  "catalogVersion": 24,
-  "updatedAt": "2026-10-24",
+  "catalogVersion": 25,
+  "updatedAt": "2026-11-09",
   "tools": [
     {
       "id": "asset-vault",
@@ -151,12 +151,12 @@
       "id": "image-to-splat",
       "name": "ImageToSplat",
       "repo": "ImageToSplat",
-      "description": "Local TripoSplat workflow for turning a single image into Gaussian splat and point-cloud 3D exports.",
+      "description": "Turn a single image into a 3D Gaussian splat (.spz / .ply) and a textured, game-ready mesh (.glb).",
       "accent": "#55c7f7",
       "icon": "IS",
-      "category": "Under Development",
+      "category": "Released Tools",
       "packagePreference": "portable",
-      "status": "comingSoon",
+      "status": "available",
       "visible": true
     },
     {
