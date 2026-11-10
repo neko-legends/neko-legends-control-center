@@ -494,8 +494,13 @@ fn normalize_development_status(launcher_app: &mut LauncherApp) {
     }
 }
 
+/// An app with a public release is available: it leaves "Under Development"
+/// for "Released Tools". Any other category (catalog or user-made) is kept.
 fn promote_released_app(launcher_app: &mut LauncherApp) {
     launcher_app.status = ToolStatus::Available;
+    if is_under_development_category(&launcher_app.category) {
+        launcher_app.category = RELEASED_TOOLS_CATEGORY.to_string();
+    }
 }
 
 fn clear_coming_soon_release_state(launcher_app: &mut LauncherApp) {
@@ -1618,7 +1623,11 @@ fn merge_catalog_apps(saved: Vec<LauncherApp>, defaults: Vec<LauncherApp>) -> Ve
                     .previous_categories
                     .iter()
                     .any(|category| clean_category_label(category) == saved_category);
-                if !is_previous_catalog_category {
+                // "Under Development" is where the catalog parks unreleased apps, not a
+                // place the user chose: once the catalog moves the app out, follow it.
+                let left_development = is_under_development_category(&saved_category)
+                    && !is_under_development_category(&app.category);
+                if !is_previous_catalog_category && !left_development {
                     app.category = saved_category;
                 }
             }
@@ -4775,6 +4784,45 @@ mod tests {
         promote_released_app(&mut launcher_app);
         assert_eq!(launcher_app.status, ToolStatus::Available);
         assert_eq!(launcher_app.category, FUN_STUFF_CATEGORY);
+    }
+
+    #[test]
+    fn released_app_leaves_under_development() {
+        let mut launcher_app = app(
+            "test-app",
+            "Test App",
+            "TestApp",
+            "Test app.",
+            "#ffffff",
+            "TA",
+            UNDER_DEVELOPMENT_CATEGORY,
+            ToolStatus::ComingSoon,
+            None,
+        );
+        promote_released_app(&mut launcher_app);
+        assert_eq!(launcher_app.status, ToolStatus::Available);
+        assert_eq!(launcher_app.category, RELEASED_TOOLS_CATEGORY);
+    }
+
+    #[test]
+    fn saved_under_development_follows_the_catalog_once_released() {
+        let catalog_app = app(
+            "test-app",
+            "Test App",
+            "TestApp",
+            "Test app.",
+            "#ffffff",
+            "TA",
+            RELEASED_TOOLS_CATEGORY,
+            ToolStatus::Available,
+            None,
+        );
+        let mut saved_app = catalog_app.clone();
+        saved_app.category = UNDER_DEVELOPMENT_CATEGORY.to_string();
+        saved_app.latest_version = Some("v1.0.0".to_string());
+        let merged = merge_catalog_apps(vec![saved_app], vec![catalog_app]);
+        assert_eq!(merged[0].category, RELEASED_TOOLS_CATEGORY);
+        assert_eq!(merged[0].status, ToolStatus::Available);
     }
 
     #[test]

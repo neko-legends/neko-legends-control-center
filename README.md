@@ -13,7 +13,7 @@ _Click the screenshot to view it at full size._
 ## What People Can Do With It
 
 - Launch local Neko Legends tools from one compact desktop window.
-- Scan GitHub releases and see which apps are installed, missing, coming soon, or ready to update.
+- Scan GitHub releases and see which apps are installed, available, coming soon, or ready to update.
 - Download portable or installer builds per app. Portable is the default so launch usually works immediately.
 - Pick or repair an app's launch path when a local executable needs to be selected manually.
 - Open each app's GitHub README with the Info button.
@@ -92,7 +92,7 @@ Catalog behavior:
 
 Catalog status values:
 
-- `available`: The tool can be shown as a normal tool. It still only becomes `Missing` after a GitHub release is known.
+- `available`: The tool can be shown as a normal tool. It only shows as `Available` after a GitHub release is known.
 - `comingSoon`: The tool can be shown in the launcher, but downloads are disabled and stale release metadata is ignored.
 
 Recommended catalog convention: put `comingSoon` tools in the `Under Development` category. If a scan finds a public release for an under-development app, the Control Center promotes it to `available` and moves it into the released tools group automatically. Reset Layout is only for restoring the default visual layout.
@@ -106,7 +106,7 @@ Packs: Japanese, Chinese (Simplified), Korean, Russian/Cyrillic, Thai, and Arabi
 ## Status Labels
 
 - `Installed`: A local launch file or wallpaper package is present.
-- `Missing`: A release exists, but the app has not been downloaded locally.
+- `Available`: A release exists, but the app has not been downloaded locally.
 - `Coming Soon`: No public release is known yet.
 - `Update Ready`: A newer release exists than the locally installed version.
 - `Downloading`: A download is currently running.

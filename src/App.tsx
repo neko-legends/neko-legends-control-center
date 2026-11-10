@@ -358,6 +358,8 @@ function hasKnownRelease(appInfo: LauncherApp): boolean {
 }
 
 function isComingSoon(appInfo: LauncherApp): boolean {
+  // An app with a public release is available, wherever it is filed.
+  if (hasKnownRelease(appInfo)) return false
   return appInfo.status === 'comingSoon' || isUnderDevelopmentCategory(appInfo.category)
 }
 
@@ -722,7 +724,7 @@ export default function App() {
     if (status === 'scanning') return 'Scanning'
     if (status === 'checking') return 'Checking'
     if (status === 'coming-soon') return 'Coming Soon'
-    return 'Missing'
+    return 'Available'
   }
 
   useEffect(() => {
@@ -1272,7 +1274,7 @@ export default function App() {
       }
     }
     setBusy(false)
-    setNotice(`Downloaded ${successCount}/${targets.length} missing apps`)
+    setNotice(`Downloaded ${successCount}/${targets.length} available apps`)
   }
 
   async function updateAll() {
@@ -1990,9 +1992,9 @@ export default function App() {
             {busy ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
             Scan
           </button>
-          <button className="scan-button" type="button" onClick={() => void downloadAllMissing()} disabled={busy || missingCount === 0} title="Download missing apps">
+          <button className="scan-button" type="button" onClick={() => void downloadAllMissing()} disabled={busy || missingCount === 0} title="Download every available app that is not installed yet">
             <Download size={17} />
-            Get Missing
+            Get Available
           </button>
           <button className="scan-button" type="button" onClick={() => void updateAll()} disabled={busy || updateCount === 0} title="Download available updates">
             <RefreshCw size={17} />
