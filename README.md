@@ -147,6 +147,9 @@ scripts/install-omarchy.sh             # build + install to ~/.local
 scripts/install-omarchy.sh --uninstall # remove it
 ```
 
+A copy installed this way updates itself too: the first in-app update downloads the release AppImage into the Control Center's data folder and turns `~/.local/bin/neko-legends-control-center` into a small launcher for it. The app launcher entry stays the same.
+
+
 This needs `webkit2gtk-4.1`, `gtk3`, and `libsoup3` (preinstalled on Omarchy) and Rust (`cargo` on PATH, or it uses `mise`'s `rust@stable`). Rerun it to update.
 
 On Linux:

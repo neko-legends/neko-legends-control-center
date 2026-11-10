@@ -3845,6 +3845,54 @@ fn replace_running_appimage(app: &AppHandle, source: &Path) -> Result<(), String
     Ok(())
 }
 
+/// Linux, installed from source (scripts/install-omarchy.sh puts a plain
+/// binary in ~/.local/bin): keep the downloaded AppImage in the app data
+/// folder and turn the installed binary into a small launcher for it. The
+/// app launcher entry keeps working unchanged, and from then on the Control
+/// Center runs from the AppImage and updates itself like any AppImage install.
+fn switch_source_install_to_appimage(app: &AppHandle, source: &Path) -> Result<(), String> {
+    let installed = std::env::current_exe().map_err(|err| err.to_string())?;
+    let appimage_dir = app_data_dir(app)?.join("control-center");
+    fs::create_dir_all(&appimage_dir).map_err(|err| err.to_string())?;
+    let appimage = appimage_dir.join("Neko-Legends-Control-Center.AppImage");
+    let staged = appimage.with_extension("AppImage.new");
+    fs::copy(source, &staged).map_err(|err| {
+        format!("Could not save the update to {}: {err}", appimage_dir.display())
+    })?;
+    mark_executable(&staged)?;
+    fs::rename(&staged, &appimage).map_err(|err| err.to_string())?;
+
+    // Replace the installed binary by rename: the running process keeps its own copy.
+    let launcher = source_install_launcher_script(&appimage);
+    let staged_launcher = installed.with_extension("new");
+    fs::write(&staged_launcher, launcher).map_err(|err| {
+        format!(
+            "Could not update {} (is its folder writable?): {err}",
+            installed.display()
+        )
+    })?;
+    mark_executable(&staged_launcher)?;
+    fs::rename(&staged_launcher, &installed).map_err(|err| err.to_string())?;
+
+    native_app_command(&appimage)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|err| err.to_string())?;
+    app.exit(0);
+    Ok(())
+}
+
+/// Shell launcher that starts the Control Center AppImage. AppImages need
+/// FUSE 2 to mount themselves; without it (Arch/Omarchy) they extract and run.
+fn source_install_launcher_script(appimage: &Path) -> String {
+    let quoted = appimage.to_string_lossy().replace('\'', r"'\''");
+    format!(
+        "#!/bin/sh\n# Neko Legends Control Center: starts the self-updating AppImage (written by the in-app update).\n[ -e /usr/lib/libfuse.so.2 ] || export APPIMAGE_EXTRACT_AND_RUN=1\nexec '{quoted}' \"$@\"\n"
+    )
+}
+
 /// When started from an AppImage, add (or refresh) an app launcher entry so it
 /// shows up in desktop launchers such as Omarchy's. An entry written by
 /// scripts/install-omarchy.sh (Exec is not an AppImage) is left alone.
@@ -3893,7 +3941,10 @@ fn schedule_control_center_update(app: &AppHandle, source_exe: &Path) -> Result<
         if !source_exe.exists() {
             return Err("Downloaded Control Center update file is missing.".to_string());
         }
-        return replace_running_appimage(app, source_exe);
+        if running_appimage_path().is_some() {
+            return replace_running_appimage(app, source_exe);
+        }
+        return switch_source_install_to_appimage(app, source_exe);
     }
 
     if !source_exe.exists() {
@@ -3938,11 +3989,8 @@ fn schedule_control_center_update(app: &AppHandle, source_exe: &Path) -> Result<
 
 #[tauri::command]
 async fn install_control_center_update(app: AppHandle) -> Result<(), String> {
-    if !cfg!(windows) && running_appimage_path().is_none() {
-        return Err(
-            "Automatic updates work for the Control Center AppImage. For a source install, rerun scripts/install-omarchy.sh."
-                .to_string(),
-        );
+    if !cfg!(windows) && running_appimage_path().is_none() && cfg!(debug_assertions) {
+        return Err("Automatic updates are off in a development build.".to_string());
     }
 
     let client = github_client()?;
@@ -4784,6 +4832,13 @@ mod tests {
         promote_released_app(&mut launcher_app);
         assert_eq!(launcher_app.status, ToolStatus::Available);
         assert_eq!(launcher_app.category, FUN_STUFF_CATEGORY);
+    }
+
+    #[test]
+    fn source_install_launcher_quotes_the_appimage_path() {
+        let script = source_install_launcher_script(Path::new("/home/it's me/Neko.AppImage"));
+        assert!(script.starts_with("#!/bin/sh\n"));
+        assert!(script.contains("exec '/home/it'\\''s me/Neko.AppImage' \"$@\""));
     }
 
     #[test]
