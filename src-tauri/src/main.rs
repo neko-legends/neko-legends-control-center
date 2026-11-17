@@ -12,7 +12,7 @@ use std::{
     process::{Child, Command, Stdio},
     sync::{Mutex, OnceLock},
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 use tauri::{AppHandle, Emitter, Manager, PhysicalSize, Size, WebviewWindow, WindowEvent};
 #[cfg(windows)]
@@ -47,7 +47,21 @@ const RELEASE_SCAN_BATCH_SIZE: usize = 2;
 const RELEASE_SCAN_BATCH_DELAY_MS: u64 = 750;
 const RELEASE_SCAN_BATCH_SPREAD_MS: u64 = 100;
 
-static RUNNING_APPS: OnceLock<Mutex<BTreeMap<String, Child>>> = OnceLock::new();
+static RUNNING_APPS: OnceLock<Mutex<BTreeMap<String, RunningApp>>> = OnceLock::new();
+static RUNNING_APP_REAPER: OnceLock<()> = OnceLock::new();
+
+/// A second Launch of the same app this soon after the first is treated as a
+/// double-click and ignored instead of restarting the app.
+const RELAUNCH_DEBOUNCE: Duration = Duration::from_secs(2);
+/// How long a relaunch waits for the running copy to quit on its own before
+/// force-killing it.
+const RELAUNCH_GRACEFUL_TIMEOUT: Duration = Duration::from_secs(5);
+const RUNNING_APP_REAP_INTERVAL: Duration = Duration::from_secs(5);
+
+struct RunningApp {
+    child: Child,
+    launched_at: Instant,
+}
 static WINDOW_SIZE_SAVE_STATE: OnceLock<Mutex<WindowSizeSaveState>> = OnceLock::new();
 static CAPABILITY_CATALOG_WRITE_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
@@ -3481,33 +3495,93 @@ fn reset_layout(app: AppHandle) -> Result<ControlCenterState, String> {
     get_state(app)
 }
 
-fn running_apps() -> &'static Mutex<BTreeMap<String, Child>> {
+fn running_apps() -> &'static Mutex<BTreeMap<String, RunningApp>> {
     RUNNING_APPS.get_or_init(|| Mutex::new(BTreeMap::new()))
 }
 
+/// Periodically reaps launched apps that have exited, so they do not linger as
+/// zombies and a later Launch does not mistake them for a running copy.
+fn start_running_app_reaper() {
+    RUNNING_APP_REAPER.get_or_init(|| {
+        thread::spawn(|| loop {
+            thread::sleep(RUNNING_APP_REAP_INTERVAL);
+            if let Ok(mut running) = running_apps().lock() {
+                running.retain(|_, app| matches!(app.child.try_wait(), Ok(None)));
+            }
+        });
+    });
+}
+
+/// Stops a running app before it is relaunched.
+///
+/// On Linux an AppImage serves its own files from a FUSE mount that goes away
+/// as soon as the main process exits, and a multi-process app (Electron,
+/// Chromium) keeps helper processes running from that mount. Killing only the
+/// main process left those helpers to die with SIGBUS. So ask the main
+/// process to quit (SIGTERM), which lets the app shut its own helpers down,
+/// and only if it does not exit in time force-kill its whole process group.
+#[cfg(unix)]
+fn stop_running_app(child: &mut Child) {
+    let pid = child.id() as libc::pid_t;
+    unsafe {
+        libc::kill(pid, libc::SIGTERM);
+    }
+    let deadline = Instant::now() + RELAUNCH_GRACEFUL_TIMEOUT;
+    while Instant::now() < deadline {
+        match child.try_wait() {
+            Ok(None) => thread::sleep(Duration::from_millis(100)),
+            _ => return,
+        }
+    }
+    // Still running, so it has not been reaped and its process group id is
+    // still ours to signal.
+    unsafe {
+        libc::kill(-pid, libc::SIGKILL);
+    }
+    let _ = child.kill();
+    let _ = child.wait();
+}
+
+#[cfg(not(unix))]
+fn stop_running_app(child: &mut Child) {
+    let _ = child.kill();
+    let _ = child.wait();
+}
+
 fn launch_or_relaunch_executable(app_id: &str, path: &Path) -> Result<bool, String> {
+    start_running_app_reaper();
     let mut running = running_apps()
         .lock()
         .map_err(|_| "Could not access running app state.".to_string())?;
     let mut relaunched = false;
 
-    if let Some(child) = running.get_mut(app_id) {
-        match child.try_wait() {
-            Ok(Some(_)) => {}
-            Ok(None) => {
-                relaunched = true;
-                let _ = child.kill();
-                let _ = child.wait();
+    if let Some(existing) = running.get_mut(app_id) {
+        if matches!(existing.child.try_wait(), Ok(None)) {
+            if existing.launched_at.elapsed() < RELAUNCH_DEBOUNCE {
+                return Ok(false);
             }
-            Err(_) => {}
+            relaunched = true;
+            stop_running_app(&mut existing.child);
         }
         running.remove(app_id);
     }
 
-    let child = native_app_command(path)
-        .spawn()
-        .map_err(|err| err.to_string())?;
-    running.insert(app_id.to_string(), child);
+    let mut command = native_app_command(path);
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        // Its own process group, so a hung app can be force-killed with all
+        // of its helper processes.
+        command.process_group(0);
+    }
+    let child = command.spawn().map_err(|err| err.to_string())?;
+    running.insert(
+        app_id.to_string(),
+        RunningApp {
+            child,
+            launched_at: Instant::now(),
+        },
+    );
     Ok(relaunched)
 }
 
