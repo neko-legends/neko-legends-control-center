@@ -16,8 +16,10 @@ The Control Center must be running for commands to be processed.
 When Agent control is enabled, the app creates:
 
 ```text
-%APPDATA%\com.nekolegends.controlcenter\agent-control\
+~/.local/share/com.nekolegends.controlcenter/agent-control/
 ```
+
+Windows is no longer supported (development moved to Omarchy). Older Windows builds used `%APPDATA%\com.nekolegends.controlcenter\agent-control\`; the backslash paths below are from that era and map to the same names under the Linux folder.
 
 Important files and folders:
 

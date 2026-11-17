@@ -1,6 +1,8 @@
 # Neko Legends Control Center
 
-Neko Legends Control Center is a portable Windows launcher and update hub for a growing collection of free Neko Legends / ForPublic tools.
+Neko Legends Control Center is a launcher and update hub for a growing collection of free Neko Legends / ForPublic tools, running on Linux ([Omarchy](https://omarchy.org)).
+
+> **Windows is no longer supported.** Development has moved to Omarchy (Arch + Hyprland), and new tools and releases target Linux only. The Windows code paths and older Windows builds are still in the repo and on past releases, but they are no longer built, tested, or fixed.
 
 The bigger goal is game development. I am building these tools while I build games, because making games is already hard enough without rebuilding the same helper utilities over and over. This collection is meant to give people useful open source tools for graphics, video, audio, workflow automation, and game starter projects so they can spend more time making games and less time making the tools around the game.
 
@@ -34,7 +36,7 @@ There are three ways to launch an installed app:
 
 ## Current Tools
 
-Catalog snapshot: `catalog/tools.json` version 26, updated 2026-11-09.
+Catalog snapshot: `catalog/tools.json` version 27, updated 2026-11-16.
 
 ### Released Tools
 
@@ -67,6 +69,7 @@ These entries are visible in the Control Center, but downloads stay disabled unt
 | --- | --- | --- |
 | Asset Vault | [neko-legends/AssetVault](https://github.com/neko-legends/AssetVault) | Local-first library for AI-generated game assets: import, triage, dedupe, search, export. |
 | ASCII 3D | [neko-legends/ImageToASCII3D](https://github.com/neko-legends/ImageToASCII3D) | Image-to-ASCII converter with optional depth-map driven 3D parallax exports. |
+| Omarchy Cut | [neko-legends/omarchy-cut](https://github.com/neko-legends/omarchy-cut) | Timeline video editor for Omarchy that plays and saves Shotcut (MLT) projects, with waveforms, speed, fades, and size/position/rotation. |
 | Image to 3D | [neko-legends/ImageTo3D](https://github.com/neko-legends/ImageTo3D) | Local image-to-3D workflow for mesh, texture, and 3D asset generation. |
 | Palette Forge | [neko-legends/PaletteForge](https://github.com/neko-legends/PaletteForge) | Extract project palettes, remap assets, audit palette drift, and export engine-agnostic LUT/index textures. |
 | SplatScape | [neko-legends/SplatScape](https://github.com/neko-legends/SplatScape) | Portable FPS-style explorer for 3D Gaussian splat scenes with WASD and mouse-look navigation. |
@@ -159,11 +162,11 @@ On Linux:
 - AppImages run without FUSE 2 by extracting on launch (`APPIMAGE_EXTRACT_AND_RUN=1`).
 - Apps launched from the Control Center inherit `WEBKIT_DISABLE_DMABUF_RENDERER=1`, which avoids the WebKitGTK "Error 71" crash on Wayland with NVIDIA.
 
-Releases are built for both Windows and Linux by `.github/workflows/release.yml` when a `v*` tag is pushed.
+Releases are built by `.github/workflows/release.yml` when a `v*` tag is pushed. Only the Linux build is supported now (see the note at the top).
 
 ### Apps with Linux builds
 
-Every released tool now ships a Linux build next to its Windows one, built in CI on Ubuntu 22.04 and tested on Omarchy:
+Every released tool ships a Linux build, built in CI on Ubuntu 22.04 (Omarchy Cut on Arch) and tested on Omarchy. Their older Windows builds are no longer supported:
 
 | App | First Linux release | Linux asset |
 | --- | --- | --- |
@@ -180,6 +183,7 @@ Every released tool now ships a Linux build next to its Windows one, built in CI
 | ASCII 3D | v26.11.7 | AppImage |
 | ImageToSplat | v26.11.9 | AppImage, Linux only for now (Python 3.12 runtime via `uv`; the mesh export needs the CUDA toolkit) |
 | Neko Capture | v26.11.9 | AppImage, Linux only for now (Electron; nothing else to install) |
+| Omarchy Cut | v0.1.0 | `omarchy-cut-linux-x86_64.zip` (native Qt binary, Linux only; uses the system's Qt and MLT: `sudo pacman -S --needed mlt sdl2-compat ffmpeg`) |
 
 The AI tools need [`uv`](https://docs.astral.sh/uv/) on Linux (Omarchy includes it through mise; elsewhere `curl -LsSf https://astral.sh/uv/install.sh | sh`) because Omarchy's system Python (3.14) is newer than PyTorch and their model libraries support. PurplePlanet and StarGaze are web wallpapers: View Demo works everywhere, and their packages download on Linux too.
 

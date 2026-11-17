@@ -1,6 +1,6 @@
 {
-  "catalogVersion": 26,
-  "updatedAt": "2026-11-09",
+  "catalogVersion": 27,
+  "updatedAt": "2026-11-16",
   "tools": [
     {
       "id": "asset-vault",
@@ -193,6 +193,18 @@
       "category": "Released Tools",
       "packagePreference": "portable",
       "status": "available",
+      "visible": true
+    },
+    {
+      "id": "omarchy-cut",
+      "name": "Omarchy Cut",
+      "repo": "omarchy-cut",
+      "description": "Timeline video editor for Omarchy that plays and saves Shotcut (MLT) projects, with waveforms, speed, fades, and size/position/rotation.",
+      "accent": "#ffd60a",
+      "icon": "OC",
+      "category": "Under Development",
+      "packagePreference": "portable",
+      "status": "comingSoon",
       "visible": true
     },
     {
