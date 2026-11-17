@@ -541,11 +541,12 @@ fn apply_no_public_release(launcher_app: &mut LauncherApp, checked_at: &str) {
     }
 }
 
+// "Under Development" is no longer a section: unreleased apps stay in the
+// catalog, so a scan can promote them, but the launcher does not show them.
 fn default_categories() -> Vec<String> {
     vec![
         RELEASED_TOOLS_CATEGORY.to_string(),
         FUN_STUFF_CATEGORY.to_string(),
-        UNDER_DEVELOPMENT_CATEGORY.to_string(),
     ]
 }
 
@@ -584,6 +585,9 @@ fn normalize_categories(categories: Vec<String>) -> Vec<String> {
     let mut normalized = Vec::new();
     for category in categories {
         let label = clean_category_label(&category);
+        if is_under_development_category(&label) {
+            continue;
+        }
         if !normalized.iter().any(|existing| existing == &label) {
             normalized.push(label);
         }
@@ -613,7 +617,7 @@ fn default_apps() -> Vec<LauncherApp> {
         app("cutscene-converter", "Cutscene Converter", "CutsceneConverter", "Godot-friendly cutscene video converter for MP4, WebM, and OGV.", "#f06f48", "CC", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("depth-map-ai-generator", "DepthMap AI", "depth-map-generator", "Batch depth-map and WebP generator for local AI image workflows.", "#43b883", "DM", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         with_previous_categories(app("image-to-ascii-3d", "ASCII 3D", "ImageToASCII3D", "Image-to-ASCII converter with optional depth-map driven 3D parallax exports.", "#f0a848", "A3", FUN_STUFF_CATEGORY, ToolStatus::Available, None), &[UNDER_DEVELOPMENT_CATEGORY, RELEASED_TOOLS_CATEGORY]),
-        app("image-to-3d", "Image to 3D", "ImageTo3D", "Local image-to-3D workflow for mesh, texture, and 3D asset generation.", "#8c65df", "I3", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::Available, None),
+        app("image-to-3d", "Image to 3D", "ImageTo3D", "Local image-to-3D workflow for mesh, texture, and 3D asset generation.", "#8c65df", "I3", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("multi-angle-edit", "Multi-Angle Edit", "multi-angle-edit", "Local multi-angle image editor: re-render a photo from a new camera angle with Qwen-Image-Edit + the Multiple-Angles LoRA on your own GPU.", "#b14bff", "MA", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("image-to-splat", "ImageToSplat", "ImageToSplat", "Turn a single image into a 3D Gaussian splat (.spz / .ply) and a textured, game-ready mesh (.glb).", "#55c7f7", "IS", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("splatscape", "SplatScape", "SplatScape", "Portable FPS-style explorer for 3D Gaussian splat scenes with WASD and mouse-look navigation.", "#7adfbb", "SS", UNDER_DEVELOPMENT_CATEGORY, ToolStatus::ComingSoon, None),
@@ -4914,6 +4918,17 @@ mod tests {
         let script = source_install_launcher_script(Path::new("/home/it's me/Neko.AppImage"));
         assert!(script.starts_with("#!/bin/sh\n"));
         assert!(script.contains("exec '/home/it'\\''s me/Neko.AppImage' \"$@\""));
+    }
+
+    #[test]
+    fn saved_layouts_drop_the_under_development_section() {
+        let categories = normalize_categories(vec![
+            RELEASED_TOOLS_CATEGORY.to_string(),
+            UNDER_DEVELOPMENT_CATEGORY.to_string(),
+            "My Favorites".to_string(),
+        ]);
+        assert_eq!(categories, vec![RELEASED_TOOLS_CATEGORY.to_string(), "My Favorites".to_string()]);
+        assert!(!default_categories().iter().any(|category| is_under_development_category(category)));
     }
 
     #[test]

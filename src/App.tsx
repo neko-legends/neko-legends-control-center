@@ -202,7 +202,9 @@ const underDevelopmentCategory = 'Under Development'
 const releasedToolsCategory = 'Released Tools'
 const legacyReleasedWorkStuffCategory = 'Released Work Stuff'
 const funStuffCategory = 'Fun Stuff'
-const defaultCategories = [releasedToolsCategory, funStuffCategory, underDevelopmentCategory]
+// Unreleased apps are not shown, so there is no Under Development section; an
+// app appears under Released Tools once a scan finds its first release.
+const defaultCategories = [releasedToolsCategory, funStuffCategory]
 const githubOwner = 'neko-legends'
 const bootReleaseScanMaxAgeMs = 12 * 60 * 60 * 1000
 const collapsedCategoriesStorageKey = 'neko-legends-control-center.collapsed-categories.v1'
@@ -216,11 +218,9 @@ const fallbackState: ControlCenterState = {
     app('cutscene-converter', 'Cutscene Converter', 'CutsceneConverter', 'Godot-friendly cutscene video converter for MP4, WebM, and OGV.', '#f06f48', 'CC', releasedToolsCategory),
     app('depth-map-ai-generator', 'DepthMap AI', 'depth-map-generator', 'Batch depth-map and WebP generator for local AI image workflows.', '#43b883', 'DM', releasedToolsCategory),
     app('image-to-ascii-3d', 'ASCII 3D', 'ImageToASCII3D', 'Image-to-ASCII converter with optional depth-map driven 3D parallax exports.', '#f0a848', 'A3', 'Fun Stuff'),
-    app('image-to-3d', 'Image to 3D', 'ImageTo3D', 'Local image-to-3D workflow for mesh, texture, and 3D asset generation.', '#8c65df', 'I3', 'Under Development'),
+    app('image-to-3d', 'Image to 3D', 'ImageTo3D', 'Local image-to-3D workflow for mesh, texture, and 3D asset generation.', '#8c65df', 'I3', releasedToolsCategory),
     app('multi-angle-edit', 'Multi-Angle Edit', 'multi-angle-edit', 'Local multi-angle image editor: re-render a photo from a new camera angle with Qwen-Image-Edit + the Multiple-Angles LoRA on your own GPU.', '#b14bff', 'MA', releasedToolsCategory),
     app('image-to-splat', 'ImageToSplat', 'ImageToSplat', 'Turn a single image into a 3D Gaussian splat (.spz / .ply) and a textured, game-ready mesh (.glb).', '#55c7f7', 'IS', releasedToolsCategory),
-    app('splatscape', 'SplatScape', 'SplatScape', 'Portable FPS-style explorer for 3D Gaussian splat scenes with WASD and mouse-look navigation.', '#7adfbb', 'SS', 'Under Development', null, 'comingSoon'),
-    app('painterly-clouds-3d', 'Painterly Clouds 3D', 'painterly-clouds-3d', 'Painterly Three.js cloud scene for stylized skyboxes, wallpapers, and motion art.', '#7fb7ff', 'PC', 'Under Development', null, 'comingSoon'),
     app('markrush', 'MarkRush', 'mark-rush', 'Fast local Markdown viewer/editor built for huge files and folders.', '#e05d7b', 'MR', releasedToolsCategory),
     app('opensplit', 'OpenSplit', 'open-split', 'Multi-pane terminal harness for AI coding agents, shells, and SSH sessions.', '#4fb6d8', 'OS', releasedToolsCategory),
     app('seamless-image-edit', 'Seamless Image Edit', 'SeamlessImageEdit', 'Local image tiling and seamless texture prep for game art workflows.', '#d889ff', 'SI', releasedToolsCategory),
@@ -419,7 +419,7 @@ function categoryLabel(category: string): string {
   if (key === releasedToolsCategory.toLocaleLowerCase()) return releasedToolsCategory
   if (key === legacyReleasedWorkStuffCategory.toLocaleLowerCase()) return releasedToolsCategory
   if (key === funStuffCategory.toLocaleLowerCase()) return funStuffCategory
-  if (key === underDevelopmentCategory.toLocaleLowerCase()) return underDevelopmentCategory
+  if (key === underDevelopmentCategory.toLocaleLowerCase()) return releasedToolsCategory
   return value || releasedToolsCategory
 }
 
@@ -648,7 +648,8 @@ export default function App() {
   const pendingAppPreviewRef = useRef<PendingAppPreview | null>(null)
   const didApplyAgentAutoStartRef = useRef(false)
 
-  const visibleApps = useMemo(() => state.apps.filter((candidate) => candidate.visible), [state.apps])
+  const listedApps = useMemo(() => state.apps.filter((candidate) => !isComingSoon(candidate)), [state.apps])
+  const visibleApps = useMemo(() => listedApps.filter((candidate) => candidate.visible), [listedApps])
   const selectedApp = useMemo(
     () => visibleApps.find((candidate) => candidate.id === selectedId) ?? visibleApps[0] ?? state.apps[0],
     [selectedId, state.apps, visibleApps],
@@ -657,8 +658,8 @@ export default function App() {
   const configuredCount = visibleApps.filter((candidate) => isAppDownloaded(candidate)).length
   const updateCount = visibleApps.filter((candidate) => versionStatus(candidate) === 'update').length
   const missingCount = visibleApps.filter((candidate) => hasKnownRelease(candidate) && !isAppDownloaded(candidate)).length
-  const hiddenCount = state.apps.length - visibleApps.length
-  const layoutCategories = useMemo(() => orderedCategories(state.apps, state.settings.categories), [state.apps, state.settings.categories])
+  const hiddenCount = listedApps.length - visibleApps.length
+  const layoutCategories = useMemo(() => orderedCategories(listedApps, state.settings.categories), [listedApps, state.settings.categories])
   const collapsedCategorySet = useMemo(() => new Set(collapsedCategories), [collapsedCategories])
   const visibleGridItems = useMemo(
     () => gridItems(visibleApps, layoutCategories, collapsedCategorySet),
@@ -869,7 +870,7 @@ export default function App() {
         setAgentControlEnabled(nextState.settings.agentControlAutoStart)
         didApplyAgentAutoStartRef.current = true
       }
-      const nextVisibleApps = nextState.apps.filter((candidate) => candidate.visible)
+      const nextVisibleApps = nextState.apps.filter((candidate) => candidate.visible && !isComingSoon(candidate))
       setSelectedId((current) => nextVisibleApps.some((candidate) => candidate.id === current) ? current : nextVisibleApps[0]?.id ?? nextState.apps[0]?.id ?? '')
       setNotice('Ready')
       const bootScanStartedAt = Date.now()
@@ -1900,7 +1901,7 @@ export default function App() {
   }
 
   function setAppVisible(appId: string, visible: boolean) {
-    const visibleCount = state.apps.filter((candidate) => candidate.visible).length
+    const visibleCount = listedApps.filter((candidate) => candidate.visible).length
     if (!visible && visibleCount <= 1) {
       setNotice('At least one app must stay visible')
       return
@@ -2024,7 +2025,7 @@ export default function App() {
               ))}
             </div>
             <div className="visibility-row" aria-label="Visible apps">
-              {state.apps.map((appInfo) => (
+              {listedApps.map((appInfo) => (
                 <label className={classNames('app-toggle', !appInfo.visible && 'hidden')} key={appInfo.id} title={appInfo.name}>
                   <input
                     type="checkbox"

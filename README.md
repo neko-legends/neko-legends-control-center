@@ -15,7 +15,7 @@ _Click the screenshot to view it at full size._
 ## What People Can Do With It
 
 - Launch local Neko Legends tools from one compact desktop window.
-- Scan GitHub releases and see which apps are installed, available, coming soon, or ready to update.
+- Scan GitHub releases and see which apps are installed, available, or ready to update.
 - Download portable or installer builds per app. Portable is the default so launch usually works immediately.
 - Pick or repair an app's launch path when a local executable needs to be selected manually.
 - Open each app's GitHub README with the Info button.
@@ -36,7 +36,7 @@ There are three ways to launch an installed app:
 
 ## Current Tools
 
-Catalog snapshot: `catalog/tools.json` version 27, updated 2026-11-16.
+Catalog snapshot: `catalog/tools.json` version 28, updated 2026-11-16.
 
 ### Released Tools
 
@@ -62,18 +62,9 @@ Catalog snapshot: `catalog/tools.json` version 27, updated 2026-11-16.
 | PurplePlanet | [neko-legends/PurplePlanet](https://github.com/neko-legends/PurplePlanet) | [Demo](https://nekolegends.com/res/projects/purplePlanet/) | Three.js planet motion art for live wallpapers and screensavers. |
 | StarGaze | [neko-legends/StarGaze](https://github.com/neko-legends/StarGaze) | [Demo](https://nekolegends.com/res/projects/starGaze/) | Three.js starfield wallpaper and screensaver with tunable motion. |
 
-### Under Development
+### Not Yet Released
 
-These entries are visible in the Control Center, but downloads stay disabled until a public GitHub release is found. A manual Scan, or the startup stale-release scan, can promote an app automatically once it ships.
-
-| App | Repository | Purpose |
-| --- | --- | --- |
-| Asset Vault | [neko-legends/AssetVault](https://github.com/neko-legends/AssetVault) | Local-first library for AI-generated game assets: import, triage, dedupe, search, export. |
-| ASCII 3D | [neko-legends/ImageToASCII3D](https://github.com/neko-legends/ImageToASCII3D) | Image-to-ASCII converter with optional depth-map driven 3D parallax exports. |
-| Image to 3D | [neko-legends/ImageTo3D](https://github.com/neko-legends/ImageTo3D) | Local image-to-3D workflow for mesh, texture, and 3D asset generation. |
-| Palette Forge | [neko-legends/PaletteForge](https://github.com/neko-legends/PaletteForge) | Extract project palettes, remap assets, audit palette drift, and export engine-agnostic LUT/index textures. |
-| SplatScape | [neko-legends/SplatScape](https://github.com/neko-legends/SplatScape) | Portable FPS-style explorer for 3D Gaussian splat scenes with WASD and mouse-look navigation. |
-| Painterly Clouds 3D | [neko-legends/painterly-clouds-3d](https://github.com/neko-legends/painterly-clouds-3d) | Painterly Three.js cloud scene for stylized skyboxes, wallpapers, and motion art. |
+Tools without a public GitHub release stay in the catalog but are not shown in the launcher, so there is no Under Development section. A manual Scan, or the startup stale-release scan, shows an app under Released Tools as soon as its first release is found. Waiting for a release: Asset Vault, Palette Forge, SplatScape, and Painterly Clouds 3D.
 
 ## Dynamic Tool Catalog
 
@@ -96,9 +87,9 @@ Catalog behavior:
 Catalog status values:
 
 - `available`: The tool can be shown as a normal tool. It only shows as `Available` after a GitHub release is known.
-- `comingSoon`: The tool can be shown in the launcher, but downloads are disabled and stale release metadata is ignored.
+- `comingSoon`: The tool is not shown in the launcher until a public release is found, and stale release metadata is ignored.
 
-Recommended catalog convention: put `comingSoon` tools in the `Under Development` category. If a scan finds a public release for an under-development app, the Control Center promotes it to `available` and moves it into the released tools group automatically. Reset Layout is only for restoring the default visual layout.
+Catalog convention: give `comingSoon` tools the category they should appear in once released (usually `Released Tools`). If a scan finds a public release for one, the Control Center promotes it to `available` and shows it. Older layouts that still have an `Under Development` section drop it. Reset Layout is only for restoring the default visual layout.
 
 ## Language Packs
 
@@ -110,7 +101,6 @@ Packs: Japanese, Chinese (Simplified), Korean, Russian/Cyrillic, Thai, and Arabi
 
 - `Installed`: A local launch file or wallpaper package is present.
 - `Available`: A release exists, but the app has not been downloaded locally.
-- `Coming Soon`: No public release is known yet.
 - `Update Ready`: A newer release exists than the locally installed version.
 - `Downloading`: A download is currently running.
 
@@ -253,8 +243,8 @@ Important source-of-truth details:
 - The GitHub owner is `neko-legends`.
 - Hosted catalog entries must use stable `id` values. Do not rename an `id` once users may have saved paths or layouts for it.
 - Increase `catalogVersion` when catalog defaults should replace older cached defaults.
-- Use `status: "comingSoon"` for tools that should appear in the launcher but should not download yet.
-- Use `category: "Under Development"` for coming-soon tools unless there is a stronger reason to place them elsewhere.
+- Use `status: "comingSoon"` for tools that are cataloged but not released; they stay hidden until a release is found.
+- There is no `Under Development` category any more; give coming-soon tools the category they will be released into.
 - The current version must stay aligned in `package.json`, `package-lock.json`, `src-tauri\Cargo.toml`, `src-tauri\Cargo.lock`, `src-tauri\tauri.conf.json`, and the GitHub user agent in `src-tauri\src\main.rs`.
 - Portable output is generated and gitignored; do not commit `release` or `src-tauri\target-*`.
 - There is a local untracked helper script, `scripts\generate-suite-letter-icons.ps1`, that may exist in a working tree. Do not stage it unless the user asks.

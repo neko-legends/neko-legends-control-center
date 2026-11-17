@@ -2001,7 +2001,7 @@ dependencies = [
 
 [[package]]
 name = "neko-legends-control-center"
-version = "26.11.13"
+version = "26.11.14"
 dependencies = [
  "chrono",
  "libc",

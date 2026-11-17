@@ -1,5 +1,5 @@
 {
-  "catalogVersion": 27,
+  "catalogVersion": 28,
   "updatedAt": "2026-11-16",
   "tools": [
     {
@@ -106,7 +106,7 @@
       "description": "Extract project palettes, remap assets, audit palette drift, and export engine-agnostic LUT/index textures.",
       "accent": "#d75cff",
       "icon": "PF",
-      "category": "Under Development",
+      "category": "Released Tools",
       "packagePreference": "portable",
       "status": "comingSoon",
       "visible": true
@@ -166,7 +166,7 @@
       "description": "Portable FPS-style explorer for 3D Gaussian splat scenes with WASD and mouse-look navigation.",
       "accent": "#7adfbb",
       "icon": "SS",
-      "category": "Under Development",
+      "category": "Released Tools",
       "packagePreference": "portable",
       "status": "comingSoon",
       "visible": true
@@ -178,7 +178,7 @@
       "description": "Painterly Three.js cloud scene for stylized skyboxes, wallpapers, and motion art.",
       "accent": "#7fb7ff",
       "icon": "PC",
-      "category": "Under Development",
+      "category": "Released Tools",
       "packagePreference": "portable",
       "status": "comingSoon",
       "visible": true
