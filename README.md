@@ -36,7 +36,7 @@ There are three ways to launch an installed app:
 
 ## Current Tools
 
-Catalog snapshot: `catalog/tools.json` version 29, updated 2026-11-16.
+Catalog snapshot: `catalog/tools.json` version 30, updated 2026-11-16.
 
 ### Released Tools
 
@@ -62,6 +62,7 @@ Catalog snapshot: `catalog/tools.json` version 29, updated 2026-11-16.
 | --- | --- | --- | --- |
 | PurplePlanet | [neko-legends/PurplePlanet](https://github.com/neko-legends/PurplePlanet) | [Demo](https://nekolegends.com/res/projects/purplePlanet/) | Three.js planet motion art for live wallpapers and screensavers. |
 | StarGaze | [neko-legends/StarGaze](https://github.com/neko-legends/StarGaze) | [Demo](https://nekolegends.com/res/projects/starGaze/) | Three.js starfield wallpaper and screensaver with tunable motion. |
+| Stained Glass | [neko-legends/stained-glass](https://github.com/neko-legends/stained-glass) | [Demo](https://nekolegends.com/envs/stained-glass/) | Stained glass realism in Three.js: a gothic hall where sunlight or moonlight pours through the windows as coloured shafts, with your own pictures as glass. Demo only: no download. |
 
 ### Not Yet Released
 
@@ -103,6 +104,7 @@ Packs: Japanese, Chinese (Simplified), Korean, Russian/Cyrillic, Thai, and Arabi
 - `Installed`: A local launch file or wallpaper package is present.
 - `Available`: A release exists, but the app has not been downloaded locally.
 - `Update Ready`: A newer release exists than the locally installed version.
+- `Demo`: A hosted demo with nothing to download; clicking it opens the demo.
 - `Downloading`: A download is currently running.
 
 ## Portable Build

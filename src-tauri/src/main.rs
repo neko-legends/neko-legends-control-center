@@ -632,6 +632,7 @@ fn default_apps() -> Vec<LauncherApp> {
         app("venice-media-local", "Venice Media", "venice-media-local", "Local Venice API media workspace for images, video, music, voice, and cleanup.", "#34c6a3", "VM", RELEASED_TOOLS_CATEGORY, ToolStatus::Available, None),
         app("purpleplanet", "PurplePlanet", "PurplePlanet", "Luminous Three.js planet motion art for live wallpapers and screensavers.", "#8c65df", "PP", "Fun Stuff", ToolStatus::Available, Some("https://nekolegends.com/res/projects/purplePlanet/")),
         app("stargaze", "StarGaze", "StarGaze", "Glittering Three.js starfield wallpaper and screensaver with tunable motion.", "#6b7cff", "SG", "Fun Stuff", ToolStatus::Available, Some("https://nekolegends.com/res/projects/starGaze/")),
+        app("stained-glass", "Stained Glass", "stained-glass", "Stained glass realism in Three.js: a gothic hall where sunlight or moonlight pours through the windows as coloured shafts, with your own pictures as glass.", "#d94f70", "GL", FUN_STUFF_CATEGORY, ToolStatus::Available, Some("https://nekolegends.com/envs/stained-glass/")),
     ]
 }
 

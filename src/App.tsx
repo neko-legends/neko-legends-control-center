@@ -231,6 +231,7 @@ const fallbackState: ControlCenterState = {
     app('venice-media-local', 'Venice Media', 'venice-media-local', 'Local Venice API media workspace for images, video, music, voice, and cleanup.', '#34c6a3', 'VM', releasedToolsCategory),
     app('purpleplanet', 'PurplePlanet', 'PurplePlanet', 'Luminous Three.js planet motion art for live wallpapers and screensavers.', '#8c65df', 'PP', 'Fun Stuff', 'https://nekolegends.com/res/projects/purplePlanet/'),
     app('stargaze', 'StarGaze', 'StarGaze', 'Glittering Three.js starfield wallpaper and screensaver with tunable motion.', '#6b7cff', 'SG', 'Fun Stuff', 'https://nekolegends.com/res/projects/starGaze/'),
+    app('stained-glass', 'Stained Glass', 'stained-glass', 'Stained glass realism in Three.js: a gothic hall where sunlight or moonlight pours through the windows as coloured shafts, with your own pictures as glass.', '#d94f70', 'GL', 'Fun Stuff', 'https://nekolegends.com/envs/stained-glass/'),
   ],
 }
 
@@ -394,7 +395,7 @@ function installStatus(appInfo: LauncherApp): 'installed' | 'missing' {
   return isAppDownloaded(appInfo) ? 'installed' : 'missing'
 }
 
-type AppDisplayStatus = 'checking' | 'scanning' | 'coming-soon' | 'missing' | 'installed' | 'update' | 'downloading' | 'failed'
+type AppDisplayStatus = 'checking' | 'scanning' | 'coming-soon' | 'demo' | 'missing' | 'installed' | 'update' | 'downloading' | 'failed'
 
 function fileName(path: string | null): string {
   if (!path) return ''
@@ -711,6 +712,9 @@ export default function App() {
     if (scanProgress?.appId === appInfo.id && scanProgress.status === 'checking') return 'scanning'
     if (activeDownloads.includes(appInfo.id)) return 'downloading'
     if (failedDownloads[appInfo.id]) return 'failed'
+    // A hosted demo with nothing to download (stained-glass) is complete as it
+    // is: clicking it opens the demo, so it is not "coming soon".
+    if (appInfo.demoUrl && !isAppDownloaded(appInfo) && !hasKnownRelease(appInfo)) return 'demo'
     if (!isAppDownloaded(appInfo) && isComingSoon(appInfo)) return 'coming-soon'
     if (!isAppDownloaded(appInfo) && !hasKnownRelease(appInfo) && !appInfo.releaseCheckedAt) return 'checking'
     if (!isAppDownloaded(appInfo) && !hasKnownRelease(appInfo) && !hasNoPublicRelease(appInfo)) return 'failed'
@@ -727,6 +731,7 @@ export default function App() {
     if (status === 'scanning') return 'Scanning'
     if (status === 'checking') return 'Checking'
     if (status === 'coming-soon') return 'Coming Soon'
+    if (status === 'demo') return 'Demo'
     return 'Available'
   }
 

@@ -1,5 +1,5 @@
 {
-  "catalogVersion": 29,
+  "catalogVersion": 30,
   "updatedAt": "2026-11-16",
   "tools": [
     {
@@ -255,6 +255,19 @@
       "packagePreference": "portable",
       "status": "available",
       "demoUrl": "https://nekolegends.com/res/projects/starGaze/",
+      "visible": true
+    },
+    {
+      "id": "stained-glass",
+      "name": "Stained Glass",
+      "repo": "stained-glass",
+      "description": "Stained glass realism in Three.js: a gothic hall where sunlight or moonlight pours through the windows as coloured shafts, with your own pictures as glass.",
+      "accent": "#d94f70",
+      "icon": "GL",
+      "category": "Fun Stuff",
+      "packagePreference": "portable",
+      "status": "available",
+      "demoUrl": "https://nekolegends.com/envs/stained-glass/",
       "visible": true
     }
   ]

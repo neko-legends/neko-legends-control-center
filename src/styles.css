@@ -1063,7 +1063,8 @@ button {
   text-shadow: 0 0 10px color-mix(in srgb, var(--danger) 42%, transparent);
 }
 
-.app-status.coming-soon {
+.app-status.coming-soon,
+.app-status.demo {
   color: color-mix(in srgb, var(--accent-2) 34%, #6fd6ff);
   text-shadow: 0 0 10px rgb(111 214 255 / 0.34);
 }
