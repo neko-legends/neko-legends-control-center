@@ -202,9 +202,9 @@
       "description": "Timeline video editor for Omarchy that plays and saves Shotcut (MLT) projects, with waveforms, speed, fades, and size/position/rotation.",
       "accent": "#ffd60a",
       "icon": "OC",
-      "category": "Under Development",
+      "category": "Released Tools",
       "packagePreference": "portable",
-      "status": "comingSoon",
+      "status": "available",
       "visible": true
     },
     {
