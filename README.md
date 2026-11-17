@@ -36,7 +36,7 @@ There are three ways to launch an installed app:
 
 ## Current Tools
 
-Catalog snapshot: `catalog/tools.json` version 28, updated 2026-11-16.
+Catalog snapshot: `catalog/tools.json` version 29, updated 2026-11-16.
 
 ### Released Tools
 
@@ -49,6 +49,7 @@ Catalog snapshot: `catalog/tools.json` version 28, updated 2026-11-16.
 | MarkRush | [neko-legends/mark-rush](https://github.com/neko-legends/mark-rush) | Fast local Markdown viewer/editor built for huge files and folders. |
 | Multi-Angle Edit | [neko-legends/multi-angle-edit](https://github.com/neko-legends/multi-angle-edit) | Re-render an existing image from a new camera angle with Qwen-Image-Edit plus the Multiple-Angles LoRA. |
 | Neko Capture | [neko-legends/neko-capture](https://github.com/neko-legends/neko-capture) | Record any URL at an exact pixel size while you interact with it, or capture an app window, straight to MP4. |
+| Omarchy Audacity | [neko-legends/omarchy-audacity](https://github.com/neko-legends/omarchy-audacity) | Audacity for Omarchy: drag the window by its toolbars, starts in under a second, no splash, no network features or tracking. |
 | Omarchy Cut | [neko-legends/omarchy-cut](https://github.com/neko-legends/omarchy-cut) | Timeline video editor for Omarchy that plays and saves Shotcut (MLT) projects, with waveforms, speed, fades, and size/position/rotation. |
 | OpenSplit | [neko-legends/open-split](https://github.com/neko-legends/open-split) | Multi-pane terminal harness for AI coding agents, shells, and SSH sessions. |
 | Seamless Image Edit | [neko-legends/SeamlessImageEdit](https://github.com/neko-legends/SeamlessImageEdit) | Create seamless and tileable texture outputs from images or folders with seam repair, flattening, and 2x2 preview. |
@@ -156,7 +157,7 @@ Releases are built by `.github/workflows/release.yml` when a `v*` tag is pushed.
 
 ### Apps with Linux builds
 
-Every released tool ships a Linux build, built in CI on Ubuntu 22.04 (Omarchy Cut on Arch) and tested on Omarchy. Their older Windows builds are no longer supported:
+Every released tool ships a Linux build, built in CI on Ubuntu 22.04 (Omarchy Cut and Omarchy Audacity on Arch) and tested on Omarchy. Their older Windows builds are no longer supported:
 
 | App | First Linux release | Linux asset |
 | --- | --- | --- |
@@ -173,6 +174,7 @@ Every released tool ships a Linux build, built in CI on Ubuntu 22.04 (Omarchy Cu
 | ASCII 3D | v26.11.7 | AppImage |
 | ImageToSplat | v26.11.9 | AppImage, Linux only for now (Python 3.12 runtime via `uv`; the mesh export needs the CUDA toolkit) |
 | Neko Capture | v26.11.9 | AppImage, Linux only for now (Electron; nothing else to install) |
+| Omarchy Audacity | v3.7.9-4 | `omarchy-audacity-linux-x86_64.zip` (Audacity 3.7.9 built on Arch, Linux only; uses the system libraries Arch's `audacity` package uses) |
 | Omarchy Cut | v0.1.0 | `omarchy-cut-linux-x86_64.zip` (native Qt binary, Linux only; uses the system's Qt and MLT: `sudo pacman -S --needed mlt sdl2-compat ffmpeg`) |
 
 The AI tools need [`uv`](https://docs.astral.sh/uv/) on Linux (Omarchy includes it through mise; elsewhere `curl -LsSf https://astral.sh/uv/install.sh | sh`) because Omarchy's system Python (3.14) is newer than PyTorch and their model libraries support. PurplePlanet and StarGaze are web wallpapers: View Demo works everywhere, and their packages download on Linux too.

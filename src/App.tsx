@@ -226,6 +226,7 @@ const fallbackState: ControlCenterState = {
     app('seamless-image-edit', 'Seamless Image Edit', 'SeamlessImageEdit', 'Local image tiling and seamless texture prep for game art workflows.', '#d889ff', 'SI', releasedToolsCategory),
     app('sprite-atlas-packer', 'Sprite Atlas Packer', 'sprite-atlas-packer', 'Turn loose sprite frames into deterministic TexturePacker-compatible PNG/WebP atlases.', '#39a7ff', 'SA', releasedToolsCategory),
     app('neko-capture', 'Neko Capture', 'neko-capture', 'Record any URL at an exact pixel size while you interact with it, or capture an app window, straight to MP4.', '#f25f5c', 'NC', releasedToolsCategory),
+    app('omarchy-audacity', 'Omarchy Audacity', 'omarchy-audacity', 'Audacity for Omarchy: drag the window by its toolbars, starts in under a second, no splash, no network features or tracking.', '#ff6f91', 'OA', releasedToolsCategory),
     app('omarchy-cut', 'Omarchy Cut', 'omarchy-cut', 'Timeline video editor for Omarchy that plays and saves Shotcut (MLT) projects, with waveforms, speed, fades, and size/position/rotation.', '#ffd60a', 'OC', releasedToolsCategory),
     app('venice-media-local', 'Venice Media', 'venice-media-local', 'Local Venice API media workspace for images, video, music, voice, and cleanup.', '#34c6a3', 'VM', releasedToolsCategory),
     app('purpleplanet', 'PurplePlanet', 'PurplePlanet', 'Luminous Three.js planet motion art for live wallpapers and screensavers.', '#8c65df', 'PP', 'Fun Stuff', 'https://nekolegends.com/res/projects/purplePlanet/'),
