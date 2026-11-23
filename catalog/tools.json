@@ -1,6 +1,6 @@
 {
-  "catalogVersion": 30,
-  "updatedAt": "2026-11-16",
+  "catalogVersion": 31,
+  "updatedAt": "2026-11-23",
   "tools": [
     {
       "id": "asset-vault",
@@ -214,6 +214,18 @@
       "description": "Timeline video editor for Omarchy that plays and saves Shotcut (MLT) projects, with waveforms, speed, fades, and size/position/rotation.",
       "accent": "#ffd60a",
       "icon": "OC",
+      "category": "Released Tools",
+      "packagePreference": "portable",
+      "status": "available",
+      "visible": true
+    },
+    {
+      "id": "omarchy-vlc",
+      "name": "Omarchy VLC",
+      "repo": "omarchy-vlc",
+      "description": "VLC for Omarchy: a title bar to drag it across monitors, H.264 playback, and file drops that open the right file.",
+      "accent": "#f58220",
+      "icon": "OV",
       "category": "Released Tools",
       "packagePreference": "portable",
       "status": "available",
